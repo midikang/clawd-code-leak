@@ -1,0 +1,477 @@
+<section class="module" id="module-2" data-module-number="2">
+
+  <!-- Screen 1: 认识三大主演 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>认识演员阵容：工具、命令和服务</h1>
+      <p class="lead">如果 Claude Code 是一部电影,那么有三类演员在幕后协作完成你的编程任务。让我们认识他们。</p>
+    </div>
+
+    <div class="actor-showcase">
+      <div class="actor-card" style="--actor-color: var(--color-actor-1)">
+        <div class="actor-icon">🔧</div>
+        <h3>工具 (Tools)</h3>
+        <div class="actor-count">40+ 个工具</div>
+        <p>AI 的"手"——它可以调用的实际操作</p>
+        <ul class="actor-examples">
+          <li><code>BashTool</code> - 执行终端命令</li>
+          <li><code>FileReadTool</code> - 读取文件</li>
+          <li><code>FileEditTool</code> - 修改代码</li>
+          <li><code>GrepTool</code> - 搜索内容</li>
+          <li><code>WebSearchTool</code> - 网络搜索</li>
+        </ul>
+      </div>
+
+      <div class="actor-card" style="--actor-color: var(--color-actor-2)">
+        <div class="actor-icon">⚡</div>
+        <h3>命令 (Commands)</h3>
+        <div class="actor-count">50+ 个斜杠命令</div>
+        <p>用户的"遥控器"——快捷方式和控制面板</p>
+        <ul class="actor-examples">
+          <li><code>/commit</code> - 创建 git commit</li>
+          <li><code>/review</code> - 代码审查</li>
+          <li><code>/mcp</code> - 管理 MCP 服务器</li>
+          <li><code>/model</code> - 切换 AI 模型</li>
+          <li><code>/permissions</code> - 权限设置</li>
+        </ul>
+      </div>
+
+      <div class="actor-card" style="--actor-color: var(--color-actor-3)">
+        <div class="actor-icon">🌐</div>
+        <h3>服务 (Services)</h3>
+        <div class="actor-count">10+ 个服务层</div>
+        <p>幕后英雄——连接外部世界的桥梁</p>
+        <ul class="actor-examples">
+          <li><code>API 客户端</code> - 调用 Anthropic API</li>
+          <li><code>MCP 连接</code> - Model Context Protocol</li>
+          <li><code>OAuth 服务</code> - 身份认证</li>
+          <li><code>LSP 客户端</code> - 语言服务器</li>
+          <li><code>Analytics</code> - 使用数据分析</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p>这三者的关系是：<strong>用户通过命令控制 → AI 调用工具执行 → 工具依赖服务完成任务</strong>。就像你用遥控器(命令)指挥机器人(AI),机器人用工具箱(工具)干活,工具箱里的设备连着外部电源(服务)。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: 工具系统深入 - 代码实现 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>工具是如何注册的？</h2>
+      <p>让我们看看 <code>src/tools.ts</code> —— 这个文件是所有工具的"总名单"。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/tools.ts (第 193-250 行)</span>
+        </div>
+        <pre><code class="language-typescript">export function getAllBaseTools(): Tools {
+  return [
+    AgentTool,
+    TaskOutputTool,
+    BashTool,
+    // 当有内嵌搜索工具时，不需要 Glob/Grep
+    ...(hasEmbeddedSearchTools() ? [] : [GlobTool, GrepTool]),
+    ExitPlanModeV2Tool,
+    FileReadTool,
+    FileEditTool,
+    FileWriteTool,
+    NotebookEditTool,
+    WebFetchTool,
+    TodoWriteTool,
+    WebSearchTool,
+    TaskStopTool,
+    AskUserQuestionTool,
+    SkillTool,
+    EnterPlanModeTool,
+    // Ant 内部用户才有的工具
+    ...(process.env.USER_TYPE === 'ant' ? [ConfigTool] : []),
+    ...(process.env.USER_TYPE === 'ant' ? [TungstenTool] : []),
+    ...(SuggestBackgroundPRTool ? [SuggestBackgroundPRTool] : []),
+    ...(WebBrowserTool ? [WebBrowserTool] : []),
+    // TodoV2 功能开关
+    ...(isTodoV2Enabled()
+      ? [TaskCreateTool, TaskGetTool, TaskUpdateTool, TaskListTool]
+      : []),
+    ...(OverflowTestTool ? [OverflowTestTool] : []),
+    ...(CtxInspectTool ? [CtxInspectTool] : []),
+    ...(TerminalCaptureTool ? [TerminalCaptureTool] : []),
+    ...(isEnvTruthy(process.env.ENABLE_LSP_TOOL) ? [LSPTool] : []),
+    ...(isWorktreeModeEnabled() ? [EnterWorktreeTool, ExitWorktreeTool] : []),
+    getSendMessageTool(),
+    ...(ListPeersTool ? [ListPeersTool] : []),
+    ...(isAgentSwarmsEnabled()
+      ? [getTeamCreateTool(), getTeamDeleteTool()]
+      : []),
+    ...(VerifyPlanExecutionTool ? [VerifyPlanExecutionTool] : []),
+    ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
+    ...(WorkflowTool ? [WorkflowTool] : []),
+    ...(SleepTool ? [SleepTool] : []),
+    ...cronTools,
+    ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
+    ...(MonitorTool ? [MonitorTool] : []),
+    BriefTool,
+    ...(SendUserFileTool ? [SendUserFileTool] : []),
+    ...(PushNotificationTool ? [PushNotificationTool] : []),
+    ...(SubscribePRTool ? [SubscribePRTool] : []),
+    ...(getPowerShellTool() ? [getPowerShellTool()] : []),
+    ...(SnipTool ? [SnipTool] : []),
+    ...(process.env.NODE_ENV === 'test' ? [TestingPermissionTool] : []),
+    ListMcpResourcesTool,
+    ReadMcpResourceTool,
+    ...(isToolSearchEnabledOptimistic() ? [ToolSearchTool] : []),
+  ]
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-3</span>
+          <p>定义一个函数，返回所有基础工具的列表。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">4-9</span>
+          <p>总是包含的核心工具：Agent、Bash、文件操作等。注意条件加载：如果系统有内嵌搜索工具(ripgrep),就不需要单独的 Glob/Grep 工具。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">19-20</span>
+          <p><span class="glossary-term" data-tooltip="特性开关 (Feature Flag) 是一种开发技术，允许在不修改代码的情况下启用或禁用某些功能。通常用于 A/B 测试或逐步发布新功能。">特性开关</span>示例：只有 Anthropic 内部用户(USER_TYPE='ant')才能看到 ConfigTool 和 TungstenTool。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">24-27</span>
+          <p>根据功能开关启用新版 Todo 工具。这种条件加载让代码库可以同时支持多个版本的功能。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">全局</span>
+          <p>注意 <code>...</code> 扩展运算符的使用——它是条件数组合并的技巧。如果条件为真，展开数组；否则展开空数组,什么都不添加。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 设计模式：特性开关</strong>
+        <p>注意到代码中大量的 <code>...(condition ? [Tool] : [])</code> 模式了吗？这叫<strong>特性开关</strong>——允许在不修改代码的情况下启用/禁用功能。这对 A/B 测试、逐步发布、不同用户类型至关重要。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 工具、命令、服务的协作动画 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>三者如何协作？一次真实的交互</h2>
+      <p>让我们追踪用户输入 <code>/commit</code> 创建一个 git commit 的完整流程：</p>
+    </div>
+
+    <div class="group-chat-animation" id="actors-collaboration" data-participants='[
+      {"id": "user", "name": "用户", "color": "#6B6560"},
+      {"id": "command", "name": "/commit 命令", "color": "var(--color-actor-2)"},
+      {"id": "ai", "name": "Claude AI", "color": "var(--color-accent)"},
+      {"id": "bash", "name": "BashTool", "color": "var(--color-actor-1)"},
+      {"id": "read", "name": "FileReadTool", "color": "var(--color-actor-1)"},
+      {"id": "api", "name": "API 服务", "color": "var(--color-actor-3)"}
+    ]' data-messages='[
+      {"from": "user", "to": "command", "text": "输入: /commit", "delay": 0},
+      {"from": "command", "to": "ai", "text": "扩展成: \"查看 git 状态和 diff,创建一个 commit\"", "delay": 800},
+      {"from": "ai", "to": "api", "text": "发送 prompt 给 Anthropic API", "delay": 1200},
+      {"from": "api", "to": "ai", "text": "返回: 需要执行 git status", "delay": 1800},
+      {"from": "ai", "to": "bash", "text": "调用 BashTool(\"git status\")", "delay": 2400},
+      {"from": "bash", "to": "ai", "text": "返回: 2 个文件已修改", "delay": 3000},
+      {"from": "ai", "to": "api", "text": "发送新 prompt(包含 git status 结果)", "delay": 3600},
+      {"from": "api", "to": "ai", "text": "返回: 需要查看 git diff", "delay": 4200},
+      {"from": "ai", "to": "bash", "text": "调用 BashTool(\"git diff\")", "delay": 4800},
+      {"from": "bash", "to": "ai", "text": "返回: 修改了登录功能的 diff", "delay": 5400},
+      {"from": "ai", "to": "api", "text": "发送 prompt(包含所有上下文)", "delay": 6000},
+      {"from": "api", "to": "ai", "text": "返回: 生成 commit message", "delay": 6600},
+      {"from": "ai", "to": "bash", "text": "调用 BashTool(\"git commit -m ...\")", "delay": 7200},
+      {"from": "bash", "to": "ai", "text": "成功: commit 已创建", "delay": 7800},
+      {"from": "ai", "to": "user", "text": "✓ 已创建 commit: \"添加用户登录功能\"", "delay": 8400}
+    ]'></div>
+
+    <div class="content-narrow">
+      <p>这个流程展示了：</p>
+      <ul>
+        <li><strong>命令</strong> 将用户意图转换成详细指令</li>
+        <li><strong>AI</strong> 多次与 API <strong>服务</strong>通信，决定下一步行动</li>
+        <li><strong>工具</strong> 被 AI 反复调用以收集信息和执行操作</li>
+        <li>这是一个<strong>循环</strong>，不是直线——AI 会根据工具返回的结果调整策略</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Screen 4: 架构图 - 三层关系 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>从架构视角看三者</h2>
+      <p>让我们用一张架构图来理解它们的层次关系：</p>
+    </div>
+
+    <div class="architecture-diagram">
+      <div class="arch-layer" style="--layer-color: #6B6560">
+        <div class="arch-layer-title">用户交互层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">⌨️</div>
+            <div class="arch-component-name">终端输入</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">⚡</div>
+            <div class="arch-component-name">斜杠命令</div>
+            <div class="arch-component-detail">/commit, /review, /mcp...</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">💬</div>
+            <div class="arch-component-name">自然语言</div>
+            <div class="arch-component-detail">"帮我添加登录功能"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer" style="--layer-color: var(--color-accent)">
+        <div class="arch-layer-title">AI 决策层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">🤖</div>
+            <div class="arch-component-name">Claude AI</div>
+            <div class="arch-component-detail">理解意图、规划步骤</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🧠</div>
+            <div class="arch-component-name">QueryEngine</div>
+            <div class="arch-component-detail">管理对话、工具调用循环</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer" style="--layer-color: var(--color-actor-1)">
+        <div class="arch-layer-title">工具执行层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">🔧</div>
+            <div class="arch-component-name">BashTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">📄</div>
+            <div class="arch-component-name">FileReadTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">✏️</div>
+            <div class="arch-component-name">FileEditTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🔍</div>
+            <div class="arch-component-name">GrepTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🌐</div>
+            <div class="arch-component-name">WebSearchTool</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer" style="--layer-color: var(--color-actor-3)">
+        <div class="arch-layer-title">服务/系统层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">🌐</div>
+            <div class="arch-component-name">Anthropic API</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🔌</div>
+            <div class="arch-component-name">MCP 服务器</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">📁</div>
+            <div class="arch-component-name">文件系统</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">⚙️</div>
+            <div class="arch-component-name">子进程 / Shell</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🔐</div>
+            <div class="arch-component-name">OAuth / 认证</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>数据流向：</p>
+      <ol>
+        <li>用户在<strong>交互层</strong>输入命令或自然语言</li>
+        <li><strong>AI 决策层</strong>理解意图、选择工具</li>
+        <li><strong>工具执行层</strong>执行具体操作</li>
+        <li><strong>服务/系统层</strong>提供底层能力</li>
+        <li>结果逆向返回给用户</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Screen 5: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="actors-quiz">
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 1:</strong> 工具(Tools)、命令(Commands)、服务(Services)的主要区别是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>它们是同义词，没有区别</span>
+            <span class="quiz-feedback">不对。它们在架构中扮演非常不同的角色。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>命令是用户接口，工具是 AI 调用的操作，服务是底层能力提供者</span>
+            <span class="quiz-feedback">✅ 完全正确！命令是给用户的遥控器，工具是 AI 的手，服务是连接外部世界的桥梁。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>工具运行在服务器上，命令运行在本地</span>
+            <span class="quiz-feedback">不准确。它们的区别在于功能层次，不是运行位置。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>服务是付费功能，工具和命令是免费的</span>
+            <span class="quiz-feedback">这与计费无关，是架构分层的问题。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 2:</strong> 在 <code>getAllBaseTools()</code> 函数中，为什么使用 <code>...(condition ? [Tool] : [])</code> 这种模式？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>这是 TypeScript 的语法要求</span>
+            <span class="quiz-feedback">不是语法要求，是设计选择。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>为了让代码看起来更复杂</span>
+            <span class="quiz-feedback">恰恰相反！这是为了让条件逻辑更清晰。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>实现特性开关——根据环境/配置条件性地启用工具</span>
+            <span class="quiz-feedback">✅ 正确！这种模式允许在运行时根据条件(用户类型、功能开关、环境变量)决定哪些工具可用。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>为了性能优化</span>
+            <span class="quiz-feedback">不是主要原因。这是关于功能控制，不是性能。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="3">
+        <p><strong>问题 3:</strong> 当用户输入 <code>/commit</code> 时，发生了什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>直接创建 git commit</span>
+            <span class="quiz-feedback">太直接了。需要先收集信息。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>调用 CommitTool</span>
+            <span class="quiz-feedback">没有 CommitTool。命令会转换成 AI 指令。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>询问用户 commit message</span>
+            <span class="quiz-feedback">AI 会自动生成 commit message，不需要询问。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>命令被扩展成详细指令 → AI 决策 → 多次调用工具(git status, git diff) → 生成并执行 commit</span>
+            <span class="quiz-feedback">✅ 完美！这是一个多步骤的循环过程，AI 会根据工具返回的结果不断调整。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 4:</strong> MCP (Model Context Protocol) 在架构中属于哪一层？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="0">
+            <span>用户交互层</span>
+            <span class="quiz-feedback">MCP 不是用户直接交互的界面。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="1">
+            <span>服务层——它是连接外部 MCP 服务器的桥梁</span>
+            <span class="quiz-feedback">✅ 正确！MCP 是服务层的一部分，负责与外部 MCP 服务器通信，为工具提供额外的能力。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="2">
+            <span>工具层</span>
+            <span class="quiz-feedback">MCP 提供工具，但它本身是服务，不是工具。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="3">
+            <span>AI 决策层</span>
+            <span class="quiz-feedback">MCP 不参与 AI 决策，它是能力提供者。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你已经掌握了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🔧</div>
+          <h3>工具系统</h3>
+          <p>40+ 工具通过 <code>getAllBaseTools()</code> 注册，使用特性开关条件加载</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">⚡</div>
+          <h3>命令系统</h3>
+          <p>50+ 斜杠命令作为用户快捷方式，将简单输入扩展成复杂指令</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🌐</div>
+          <h3>服务层</h3>
+          <p>API、MCP、OAuth、LSP 等服务为工具提供底层能力</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔄</div>
+          <h3>协作流程</h3>
+          <p>用户 → 命令 → AI + API → 工具 → 服务 → 返回结果的循环</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你知道<strong>谁</strong>在做事了。接下来，让我们深入了解<strong>如何</strong>做事——工具的生命周期。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 3: 工具如何工作？</strong> →</p>
+    </div>
+  </div>
+
+</section>

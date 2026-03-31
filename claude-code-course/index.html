@@ -1,0 +1,3066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>深入 Claude Code - 交互式代码库课程</title>
+
+  <!-- Google Fonts: Bricolage Grotesque · DM Sans · JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400;1,9..40,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    :root {
+      --color-accent:       #D94F30;
+      --color-accent-hover: #C4432A;
+      --color-accent-light: #FDEEE9;
+      --color-accent-muted: #E8836C;
+    }
+  </style>
+
+  <script src="main.js" defer></script>
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="progress-bar" id="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    <div class="nav-inner">
+      <span class="nav-title">深入 Claude Code</span>
+      <div class="nav-dots" id="nav-dots" role="tablist">
+        <button class="nav-dot" data-target="module-1" data-tooltip="Claude Code 是什么？" role="tab" aria-label="模块 1: Claude Code 是什么？"></button>
+        <button class="nav-dot" data-target="module-2" data-tooltip="认识演员阵容" role="tab" aria-label="模块 2: 认识演员阵容"></button>
+        <button class="nav-dot" data-target="module-3" data-tooltip="工具如何工作？" role="tab" aria-label="模块 3: 工具如何工作？"></button>
+        <button class="nav-dot" data-target="module-4" data-tooltip="与外部世界对话" role="tab" aria-label="模块 4: 与外部世界对话"></button>
+        <button class="nav-dot" data-target="module-5" data-tooltip="聪明的技巧" role="tab" aria-label="模块 5: 聪明的技巧"></button>
+        <button class="nav-dot" data-target="module-6" data-tooltip="全局架构" role="tab" aria-label="模块 6: 全局架构"></button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main">
+    <!-- modules/*.html content is assembled here by build.sh -->
+<section class="module" id="module-1" data-module-number="1">
+
+  <!-- Screen 1: 欢迎和产品介绍 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>Claude Code 是什么？</h1>
+      <p class="lead">想象你在终端里打字："帮我添加一个登录功能"，然后 AI 就开始写代码、运行测试、修复 bug——直到功能完成。</p>
+      <p>这就是 Claude Code：一个让 AI 成为你编程助手的命令行工具。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="terminal-demo">
+        <div class="terminal-header">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+          <span class="terminal-title">claude-code</span>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-line">
+            <span class="terminal-prompt">$</span>
+            <span class="terminal-command">claude</span>
+          </div>
+          <div class="terminal-line user">你: 帮我添加一个用户登录功能</div>
+          <div class="terminal-line assistant">Claude: 好的，让我先看看现有的用户系统...</div>
+          <div class="terminal-line tool">→ 正在读取 src/auth/user.ts</div>
+          <div class="terminal-line tool">→ 正在创建 src/auth/login.ts</div>
+          <div class="terminal-line tool">→ 正在运行测试...</div>
+          <div class="terminal-line success">✓ 所有测试通过！登录功能已完成。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>但它<strong>不只是写代码</strong>。它可以读取文件、执行命令、搜索代码、运行测试、创建 PR——所有你在开发中需要做的事情。</p>
+    </div>
+  </div>
+
+  <!-- Screen 2: 一次真实的对话流程 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>当你输入一句话，幕后发生了什么？</h2>
+      <p>让我们追踪一次真实的用户交互：你说 "修复这个 bug"，系统是如何响应的？</p>
+    </div>
+
+    <div class="flow-animation" id="user-input-flow" data-steps='[
+      {"from": "用户", "to": "main.tsx", "label": "输入: 修复登录 bug", "icon": "💬"},
+      {"from": "main.tsx", "to": "QueryEngine", "label": "发送到 AI", "icon": "🚀"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "调用 Anthropic API", "icon": "🌐"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "返回：需要读取 auth.ts", "icon": "🔧"},
+      {"from": "QueryEngine", "to": "FileReadTool", "label": "执行工具调用", "icon": "📄"},
+      {"from": "FileReadTool", "to": "QueryEngine", "label": "文件内容", "icon": "📦"},
+      {"from": "QueryEngine", "to": "用户", "label": "显示分析结果", "icon": "✅"}
+    ]'></div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p>Claude Code 不是一个简单的聊天机器人。它是一个<span class="glossary-term" data-tooltip="一个可以使用工具、执行任务的自主程序。Agent 可以决定调用哪些工具、按什么顺序执行操作。">AI Agent</span>——能够<strong>自己决定</strong>需要做什么、调用哪些工具、如何完成任务。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 技术栈一览 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>它是用什么构建的？</h2>
+      <p>Claude Code 使用现代 JavaScript 生态系统，但选择了一些独特的技术：</p>
+    </div>
+
+    <div class="tech-stack-grid">
+      <div class="tech-card">
+        <div class="tech-icon">⚡</div>
+        <h3>Bun</h3>
+        <p>超快的 JavaScript <span class="glossary-term" data-tooltip="运行时 (runtime) 是执行代码的环境。Node.js 和 Bun 都是 JavaScript 运行时，就像 Chrome 浏览器也是一个 JavaScript 运行时。">运行时</span>，比 Node.js 快 3-4 倍</p>
+        <span class="tech-badge">替代 Node.js</span>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">⚛️</div>
+        <h3>React + Ink</h3>
+        <p>用 React 组件构建<span class="glossary-term" data-tooltip="终端 UI (Terminal User Interface) 是在命令行中显示的交互式界面，就像你在终端里看到的菜单、进度条等。">终端 UI</span>，不是网页</p>
+        <span class="tech-badge">终端中的 React</span>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">📘</div>
+        <h3>TypeScript</h3>
+        <p>类型安全的 JavaScript，1900+ 文件</p>
+        <span class="tech-badge">512K+ 行代码</span>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">🔍</div>
+        <h3>ripgrep</h3>
+        <p>极速代码搜索工具</p>
+        <span class="tech-badge">Rust 驱动</span>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>这个技术栈的选择都是为了<strong>性能</strong>——启动要快、搜索要快、响应要快。开发者不想等待。</p>
+    </div>
+  </div>
+
+  <!-- Screen 4: 代码示例 - 入口点 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>让我们看看真实的代码</h2>
+      <p>当你运行 <code>claude</code> 命令时，第一个被执行的文件是 <code>main.tsx</code>。让我们看看它在做什么：</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/main.tsx (第 1-20 行)</span>
+        </div>
+        <pre><code class="language-typescript">// 这些副作用必须在所有其他导入之前运行:
+// 1. profileCheckpoint 在模块加载前标记入口点
+// 2. startMdmRawRead 启动 MDM 子进程
+// 3. startKeychainPrefetch 预取钥匙串读取
+import { profileCheckpoint } from './utils/startupProfiler.js';
+
+profileCheckpoint('main_tsx_entry');
+import { startMdmRawRead } from './utils/settings/mdm/rawRead.js';
+
+startMdmRawRead();
+import {
+  ensureKeychainPrefetchCompleted,
+  startKeychainPrefetch
+} from './utils/secureStorage/keychainPrefetch.js';
+
+startKeychainPrefetch();
+import { feature } from 'bun:bundle';
+import { Command as CommanderCommand } from '@commander-js/extra-typings';
+import React from 'react';</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-3</span>
+          <p>注释解释了为什么这些代码必须最先运行——它们是性能优化。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">6-7</span>
+          <p>记录一个时间戳，用来测量启动性能。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">8-10</span>
+          <p>立即启动读取 MDM 设置（企业管理设置），这样它可以在后台运行。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">11-16</span>
+          <p>立即启动从<span class="glossary-term" data-tooltip="钥匙串 (Keychain) 是 macOS 系统用来存储密码、密钥等敏感信息的安全存储区域。">钥匙串</span>读取密码，也在后台运行。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">17-19</span>
+          <p>导入其他需要的模块：特性开关、命令行解析器、React。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 为什么要这样做？</strong>
+        <p>注意到代码在导入其他东西之前，就启动了两个耗时操作？这叫<strong>并行预取</strong>——在主程序加载的同时，让慢操作在后台运行。结果：启动时间减少 60+ 毫秒。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: 小测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试一下你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="intro-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 为什么 Claude Code 选择 Bun 而不是 Node.js？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>Bun 更流行</span>
+            <span class="quiz-feedback">不对。Bun 实际上比 Node.js 新得多，使用的人也少很多。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>Bun 是 TypeScript 原生支持的</span>
+            <span class="quiz-feedback">这是一个优点，但不是主要原因。Node.js 也可以运行 TypeScript。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>Bun 启动和执行速度更快</span>
+            <span class="quiz-feedback">✅ 正确！性能是关键。开发者工具需要即时响应，每一毫秒都很重要。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>Bun 有更多的包</span>
+            <span class="quiz-feedback">不对。Node.js 的 npm 生态系统要大得多。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 用户说 "添加登录功能" 后，Claude Code 的第一步是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>直接生成登录代码</span>
+            <span class="quiz-feedback">太快了！AI 需要先了解现有代码结构。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>读取相关文件了解现有架构</span>
+            <span class="quiz-feedback">✅ 对！就像一个真正的开发者，它先要理解代码库，再动手写代码。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>询问用户要什么样的登录</span>
+            <span class="quiz-feedback">不完全对。它通常会先探索代码，然后基于发现来决定是否需要更多信息。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>运行现有测试</span>
+            <span class="quiz-feedback">测试是后面的步骤，先要理解和编写代码。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 3:</strong> main.tsx 为什么要在导入其他模块之前就启动 MDM 读取？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>MDM 是最重要的功能</span>
+            <span class="quiz-feedback">不是重要性的问题，是时机的问题。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>防止其他模块覆盖 MDM 设置</span>
+            <span class="quiz-feedback">这不是加载顺序的原因。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>让慢操作在后台并行运行，节省时间</span>
+            <span class="quiz-feedback">✅ 完全正确！这是性能优化——在主程序加载时，让 I/O 操作并行执行。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>避免循环依赖</span>
+            <span class="quiz-feedback">不是。这是关于性能，不是依赖管理。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 总结与过渡 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你已经了解了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🎯</div>
+          <h3>产品定位</h3>
+          <p>Claude Code 是一个 AI Agent，可以自主决定如何完成编程任务</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">⚡</div>
+          <h3>技术选型</h3>
+          <p>使用 Bun + TypeScript + React/Ink，优先考虑性能</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔄</div>
+          <h3>执行流程</h3>
+          <p>用户输入 → QueryEngine → API → 工具调用 → 返回结果</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🚀</div>
+          <h3>性能优化</h3>
+          <p>并行预取、懒加载、特性开关——每一毫秒都重要</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你知道 Claude Code <strong>是什么</strong>了。接下来，让我们认识一下它的"演员阵容"——工具、命令和服务。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 2: 认识演员阵容</strong> →</p>
+    </div>
+  </div>
+
+</section><section class="module" id="module-2" data-module-number="2">
+
+  <!-- Screen 1: 认识三大主演 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>认识演员阵容：工具、命令和服务</h1>
+      <p class="lead">如果 Claude Code 是一部电影,那么有三类演员在幕后协作完成你的编程任务。让我们认识他们。</p>
+    </div>
+
+    <div class="actor-showcase">
+      <div class="actor-card" style="--actor-color: var(--color-actor-1)">
+        <div class="actor-icon">🔧</div>
+        <h3>工具 (Tools)</h3>
+        <div class="actor-count">40+ 个工具</div>
+        <p>AI 的"手"——它可以调用的实际操作</p>
+        <ul class="actor-examples">
+          <li><code>BashTool</code> - 执行终端命令</li>
+          <li><code>FileReadTool</code> - 读取文件</li>
+          <li><code>FileEditTool</code> - 修改代码</li>
+          <li><code>GrepTool</code> - 搜索内容</li>
+          <li><code>WebSearchTool</code> - 网络搜索</li>
+        </ul>
+      </div>
+
+      <div class="actor-card" style="--actor-color: var(--color-actor-2)">
+        <div class="actor-icon">⚡</div>
+        <h3>命令 (Commands)</h3>
+        <div class="actor-count">50+ 个斜杠命令</div>
+        <p>用户的"遥控器"——快捷方式和控制面板</p>
+        <ul class="actor-examples">
+          <li><code>/commit</code> - 创建 git commit</li>
+          <li><code>/review</code> - 代码审查</li>
+          <li><code>/mcp</code> - 管理 MCP 服务器</li>
+          <li><code>/model</code> - 切换 AI 模型</li>
+          <li><code>/permissions</code> - 权限设置</li>
+        </ul>
+      </div>
+
+      <div class="actor-card" style="--actor-color: var(--color-actor-3)">
+        <div class="actor-icon">🌐</div>
+        <h3>服务 (Services)</h3>
+        <div class="actor-count">10+ 个服务层</div>
+        <p>幕后英雄——连接外部世界的桥梁</p>
+        <ul class="actor-examples">
+          <li><code>API 客户端</code> - 调用 Anthropic API</li>
+          <li><code>MCP 连接</code> - Model Context Protocol</li>
+          <li><code>OAuth 服务</code> - 身份认证</li>
+          <li><code>LSP 客户端</code> - 语言服务器</li>
+          <li><code>Analytics</code> - 使用数据分析</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p>这三者的关系是：<strong>用户通过命令控制 → AI 调用工具执行 → 工具依赖服务完成任务</strong>。就像你用遥控器(命令)指挥机器人(AI),机器人用工具箱(工具)干活,工具箱里的设备连着外部电源(服务)。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: 工具系统深入 - 代码实现 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>工具是如何注册的？</h2>
+      <p>让我们看看 <code>src/tools.ts</code> —— 这个文件是所有工具的"总名单"。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/tools.ts (第 193-250 行)</span>
+        </div>
+        <pre><code class="language-typescript">export function getAllBaseTools(): Tools {
+  return [
+    AgentTool,
+    TaskOutputTool,
+    BashTool,
+    // 当有内嵌搜索工具时，不需要 Glob/Grep
+    ...(hasEmbeddedSearchTools() ? [] : [GlobTool, GrepTool]),
+    ExitPlanModeV2Tool,
+    FileReadTool,
+    FileEditTool,
+    FileWriteTool,
+    NotebookEditTool,
+    WebFetchTool,
+    TodoWriteTool,
+    WebSearchTool,
+    TaskStopTool,
+    AskUserQuestionTool,
+    SkillTool,
+    EnterPlanModeTool,
+    // Ant 内部用户才有的工具
+    ...(process.env.USER_TYPE === 'ant' ? [ConfigTool] : []),
+    ...(process.env.USER_TYPE === 'ant' ? [TungstenTool] : []),
+    ...(SuggestBackgroundPRTool ? [SuggestBackgroundPRTool] : []),
+    ...(WebBrowserTool ? [WebBrowserTool] : []),
+    // TodoV2 功能开关
+    ...(isTodoV2Enabled()
+      ? [TaskCreateTool, TaskGetTool, TaskUpdateTool, TaskListTool]
+      : []),
+    ...(OverflowTestTool ? [OverflowTestTool] : []),
+    ...(CtxInspectTool ? [CtxInspectTool] : []),
+    ...(TerminalCaptureTool ? [TerminalCaptureTool] : []),
+    ...(isEnvTruthy(process.env.ENABLE_LSP_TOOL) ? [LSPTool] : []),
+    ...(isWorktreeModeEnabled() ? [EnterWorktreeTool, ExitWorktreeTool] : []),
+    getSendMessageTool(),
+    ...(ListPeersTool ? [ListPeersTool] : []),
+    ...(isAgentSwarmsEnabled()
+      ? [getTeamCreateTool(), getTeamDeleteTool()]
+      : []),
+    ...(VerifyPlanExecutionTool ? [VerifyPlanExecutionTool] : []),
+    ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
+    ...(WorkflowTool ? [WorkflowTool] : []),
+    ...(SleepTool ? [SleepTool] : []),
+    ...cronTools,
+    ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
+    ...(MonitorTool ? [MonitorTool] : []),
+    BriefTool,
+    ...(SendUserFileTool ? [SendUserFileTool] : []),
+    ...(PushNotificationTool ? [PushNotificationTool] : []),
+    ...(SubscribePRTool ? [SubscribePRTool] : []),
+    ...(getPowerShellTool() ? [getPowerShellTool()] : []),
+    ...(SnipTool ? [SnipTool] : []),
+    ...(process.env.NODE_ENV === 'test' ? [TestingPermissionTool] : []),
+    ListMcpResourcesTool,
+    ReadMcpResourceTool,
+    ...(isToolSearchEnabledOptimistic() ? [ToolSearchTool] : []),
+  ]
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-3</span>
+          <p>定义一个函数，返回所有基础工具的列表。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">4-9</span>
+          <p>总是包含的核心工具：Agent、Bash、文件操作等。注意条件加载：如果系统有内嵌搜索工具(ripgrep),就不需要单独的 Glob/Grep 工具。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">19-20</span>
+          <p><span class="glossary-term" data-tooltip="特性开关 (Feature Flag) 是一种开发技术，允许在不修改代码的情况下启用或禁用某些功能。通常用于 A/B 测试或逐步发布新功能。">特性开关</span>示例：只有 Anthropic 内部用户(USER_TYPE='ant')才能看到 ConfigTool 和 TungstenTool。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">24-27</span>
+          <p>根据功能开关启用新版 Todo 工具。这种条件加载让代码库可以同时支持多个版本的功能。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">全局</span>
+          <p>注意 <code>...</code> 扩展运算符的使用——它是条件数组合并的技巧。如果条件为真，展开数组；否则展开空数组,什么都不添加。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 设计模式：特性开关</strong>
+        <p>注意到代码中大量的 <code>...(condition ? [Tool] : [])</code> 模式了吗？这叫<strong>特性开关</strong>——允许在不修改代码的情况下启用/禁用功能。这对 A/B 测试、逐步发布、不同用户类型至关重要。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 工具、命令、服务的协作动画 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>三者如何协作？一次真实的交互</h2>
+      <p>让我们追踪用户输入 <code>/commit</code> 创建一个 git commit 的完整流程：</p>
+    </div>
+
+    <div class="group-chat-animation" id="actors-collaboration" data-participants='[
+      {"id": "user", "name": "用户", "color": "#6B6560"},
+      {"id": "command", "name": "/commit 命令", "color": "var(--color-actor-2)"},
+      {"id": "ai", "name": "Claude AI", "color": "var(--color-accent)"},
+      {"id": "bash", "name": "BashTool", "color": "var(--color-actor-1)"},
+      {"id": "read", "name": "FileReadTool", "color": "var(--color-actor-1)"},
+      {"id": "api", "name": "API 服务", "color": "var(--color-actor-3)"}
+    ]' data-messages='[
+      {"from": "user", "to": "command", "text": "输入: /commit", "delay": 0},
+      {"from": "command", "to": "ai", "text": "扩展成: \"查看 git 状态和 diff,创建一个 commit\"", "delay": 800},
+      {"from": "ai", "to": "api", "text": "发送 prompt 给 Anthropic API", "delay": 1200},
+      {"from": "api", "to": "ai", "text": "返回: 需要执行 git status", "delay": 1800},
+      {"from": "ai", "to": "bash", "text": "调用 BashTool(\"git status\")", "delay": 2400},
+      {"from": "bash", "to": "ai", "text": "返回: 2 个文件已修改", "delay": 3000},
+      {"from": "ai", "to": "api", "text": "发送新 prompt(包含 git status 结果)", "delay": 3600},
+      {"from": "api", "to": "ai", "text": "返回: 需要查看 git diff", "delay": 4200},
+      {"from": "ai", "to": "bash", "text": "调用 BashTool(\"git diff\")", "delay": 4800},
+      {"from": "bash", "to": "ai", "text": "返回: 修改了登录功能的 diff", "delay": 5400},
+      {"from": "ai", "to": "api", "text": "发送 prompt(包含所有上下文)", "delay": 6000},
+      {"from": "api", "to": "ai", "text": "返回: 生成 commit message", "delay": 6600},
+      {"from": "ai", "to": "bash", "text": "调用 BashTool(\"git commit -m ...\")", "delay": 7200},
+      {"from": "bash", "to": "ai", "text": "成功: commit 已创建", "delay": 7800},
+      {"from": "ai", "to": "user", "text": "✓ 已创建 commit: \"添加用户登录功能\"", "delay": 8400}
+    ]'></div>
+
+    <div class="content-narrow">
+      <p>这个流程展示了：</p>
+      <ul>
+        <li><strong>命令</strong> 将用户意图转换成详细指令</li>
+        <li><strong>AI</strong> 多次与 API <strong>服务</strong>通信，决定下一步行动</li>
+        <li><strong>工具</strong> 被 AI 反复调用以收集信息和执行操作</li>
+        <li>这是一个<strong>循环</strong>，不是直线——AI 会根据工具返回的结果调整策略</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Screen 4: 架构图 - 三层关系 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>从架构视角看三者</h2>
+      <p>让我们用一张架构图来理解它们的层次关系：</p>
+    </div>
+
+    <div class="architecture-diagram">
+      <div class="arch-layer" style="--layer-color: #6B6560">
+        <div class="arch-layer-title">用户交互层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">⌨️</div>
+            <div class="arch-component-name">终端输入</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">⚡</div>
+            <div class="arch-component-name">斜杠命令</div>
+            <div class="arch-component-detail">/commit, /review, /mcp...</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">💬</div>
+            <div class="arch-component-name">自然语言</div>
+            <div class="arch-component-detail">"帮我添加登录功能"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer" style="--layer-color: var(--color-accent)">
+        <div class="arch-layer-title">AI 决策层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">🤖</div>
+            <div class="arch-component-name">Claude AI</div>
+            <div class="arch-component-detail">理解意图、规划步骤</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🧠</div>
+            <div class="arch-component-name">QueryEngine</div>
+            <div class="arch-component-detail">管理对话、工具调用循环</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer" style="--layer-color: var(--color-actor-1)">
+        <div class="arch-layer-title">工具执行层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">🔧</div>
+            <div class="arch-component-name">BashTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">📄</div>
+            <div class="arch-component-name">FileReadTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">✏️</div>
+            <div class="arch-component-name">FileEditTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🔍</div>
+            <div class="arch-component-name">GrepTool</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🌐</div>
+            <div class="arch-component-name">WebSearchTool</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer" style="--layer-color: var(--color-actor-3)">
+        <div class="arch-layer-title">服务/系统层</div>
+        <div class="arch-components">
+          <div class="arch-component">
+            <div class="arch-component-icon">🌐</div>
+            <div class="arch-component-name">Anthropic API</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🔌</div>
+            <div class="arch-component-name">MCP 服务器</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">📁</div>
+            <div class="arch-component-name">文件系统</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">⚙️</div>
+            <div class="arch-component-name">子进程 / Shell</div>
+          </div>
+          <div class="arch-component">
+            <div class="arch-component-icon">🔐</div>
+            <div class="arch-component-name">OAuth / 认证</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>数据流向：</p>
+      <ol>
+        <li>用户在<strong>交互层</strong>输入命令或自然语言</li>
+        <li><strong>AI 决策层</strong>理解意图、选择工具</li>
+        <li><strong>工具执行层</strong>执行具体操作</li>
+        <li><strong>服务/系统层</strong>提供底层能力</li>
+        <li>结果逆向返回给用户</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Screen 5: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="actors-quiz">
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 1:</strong> 工具(Tools)、命令(Commands)、服务(Services)的主要区别是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>它们是同义词，没有区别</span>
+            <span class="quiz-feedback">不对。它们在架构中扮演非常不同的角色。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>命令是用户接口，工具是 AI 调用的操作，服务是底层能力提供者</span>
+            <span class="quiz-feedback">✅ 完全正确！命令是给用户的遥控器，工具是 AI 的手，服务是连接外部世界的桥梁。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>工具运行在服务器上，命令运行在本地</span>
+            <span class="quiz-feedback">不准确。它们的区别在于功能层次，不是运行位置。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>服务是付费功能，工具和命令是免费的</span>
+            <span class="quiz-feedback">这与计费无关，是架构分层的问题。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 2:</strong> 在 <code>getAllBaseTools()</code> 函数中，为什么使用 <code>...(condition ? [Tool] : [])</code> 这种模式？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>这是 TypeScript 的语法要求</span>
+            <span class="quiz-feedback">不是语法要求，是设计选择。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>为了让代码看起来更复杂</span>
+            <span class="quiz-feedback">恰恰相反！这是为了让条件逻辑更清晰。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>实现特性开关——根据环境/配置条件性地启用工具</span>
+            <span class="quiz-feedback">✅ 正确！这种模式允许在运行时根据条件(用户类型、功能开关、环境变量)决定哪些工具可用。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>为了性能优化</span>
+            <span class="quiz-feedback">不是主要原因。这是关于功能控制，不是性能。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="3">
+        <p><strong>问题 3:</strong> 当用户输入 <code>/commit</code> 时，发生了什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>直接创建 git commit</span>
+            <span class="quiz-feedback">太直接了。需要先收集信息。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>调用 CommitTool</span>
+            <span class="quiz-feedback">没有 CommitTool。命令会转换成 AI 指令。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>询问用户 commit message</span>
+            <span class="quiz-feedback">AI 会自动生成 commit message，不需要询问。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>命令被扩展成详细指令 → AI 决策 → 多次调用工具(git status, git diff) → 生成并执行 commit</span>
+            <span class="quiz-feedback">✅ 完美！这是一个多步骤的循环过程，AI 会根据工具返回的结果不断调整。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 4:</strong> MCP (Model Context Protocol) 在架构中属于哪一层？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="0">
+            <span>用户交互层</span>
+            <span class="quiz-feedback">MCP 不是用户直接交互的界面。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="1">
+            <span>服务层——它是连接外部 MCP 服务器的桥梁</span>
+            <span class="quiz-feedback">✅ 正确！MCP 是服务层的一部分，负责与外部 MCP 服务器通信，为工具提供额外的能力。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="2">
+            <span>工具层</span>
+            <span class="quiz-feedback">MCP 提供工具，但它本身是服务，不是工具。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="3">
+            <span>AI 决策层</span>
+            <span class="quiz-feedback">MCP 不参与 AI 决策，它是能力提供者。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你已经掌握了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🔧</div>
+          <h3>工具系统</h3>
+          <p>40+ 工具通过 <code>getAllBaseTools()</code> 注册，使用特性开关条件加载</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">⚡</div>
+          <h3>命令系统</h3>
+          <p>50+ 斜杠命令作为用户快捷方式，将简单输入扩展成复杂指令</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🌐</div>
+          <h3>服务层</h3>
+          <p>API、MCP、OAuth、LSP 等服务为工具提供底层能力</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔄</div>
+          <h3>协作流程</h3>
+          <p>用户 → 命令 → AI + API → 工具 → 服务 → 返回结果的循环</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你知道<strong>谁</strong>在做事了。接下来，让我们深入了解<strong>如何</strong>做事——工具的生命周期。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 3: 工具如何工作？</strong> →</p>
+    </div>
+  </div>
+
+</section>
+<section class="module" id="module-3" data-module-number="3">
+
+  <!-- Screen 1: 工具的生命周期 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>工具如何工作？从 Bash 到权限</h1>
+      <p class="lead">当 Claude 决定"我需要读取一个文件"时，幕后发生了什么？让我们追踪一个工具调用的完整生命周期。</p>
+    </div>
+
+    <div class="lifecycle-diagram">
+      <div class="lifecycle-step" data-step="1">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>定义 Schema</h3>
+          <p>工具声明它需要什么参数</p>
+          <code>inputSchema: z.object({ file_path: z.string() })</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="2">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>AI 决定调用</h3>
+          <p>Claude 从可用工具中选择并生成参数</p>
+          <code>tool_use: { name: "Read", input: { file_path: "/tmp/auth.ts" } }</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="3" style="--step-color: var(--color-error)">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>权限检查</h3>
+          <p>检查用户是否允许这个操作</p>
+          <div class="permission-check">
+            <div class="check-item">
+              <span class="check-icon">🔍</span>
+              <span>验证输入合法性</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon">🛡️</span>
+              <span>检查权限规则</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon">👤</span>
+              <span>询问用户(如需要)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="4">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <h3>执行工具</h3>
+          <p>调用 <code>tool.call()</code> 方法</p>
+          <code>const result = await tool.call(input, context)</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="5">
+        <div class="step-number">5</div>
+        <div class="step-content">
+          <h3>返回结果</h3>
+          <p>工具返回数据给 AI</p>
+          <code>ToolResult&lt;string&gt; { data: "文件内容..." }</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="6">
+        <div class="step-number">6</div>
+        <div class="step-content">
+          <h3>AI 处理结果</h3>
+          <p>Claude 理解结果，决定下一步</p>
+          <code>"根据文件内容，我需要修改第 42 行..."</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p><strong>权限检查</strong>是最关键的步骤。Claude Code 永远不会在未经用户同意的情况下执行危险操作。这就是为什么你会看到"Claude 想要执行 git push，是否允许？"这样的提示。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: Tool 类型定义 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>工具的"基因蓝图"：Tool 类型</h2>
+      <p>让我们看看 <code>src/Tool.ts</code> 中工具的类型定义——这是所有工具必须遵守的"契约"。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/Tool.ts (第 362-410 行,精简版)</span>
+        </div>
+        <pre><code class="language-typescript">export type Tool&lt;
+  Input extends AnyObject = AnyObject,
+  Output = unknown,
+  P extends ToolProgressData = ToolProgressData,
+&gt; = {
+  // 工具的唯一名称
+  readonly name: string
+
+  // 可选的别名(用于重命名后的兼容性)
+  aliases?: string[]
+
+  // 输入参数的 schema (Zod 类型)
+  readonly inputSchema: Input
+
+  // 输出类型的 schema
+  outputSchema?: z.ZodType&lt;unknown&gt;
+
+  // ===== 核心方法 =====
+
+  // 执行工具的主函数
+  call(
+    args: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+    canUseTool: CanUseToolFn,
+    parentMessage: AssistantMessage,
+    onProgress?: ToolCallProgress&lt;P&gt;,
+  ): Promise&lt;ToolResult&lt;Output&gt;&gt;
+
+  // 生成工具描述(给 AI 看的)
+  description(
+    input: z.infer&lt;Input&gt;,
+    options: { ... }
+  ): Promise&lt;string&gt;
+
+  // ===== 安全和权限 =====
+
+  // 验证输入是否合法
+  validateInput?(
+    input: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+  ): Promise&lt;ValidationResult&gt;
+
+  // 检查权限(核心安全机制)
+  checkPermissions(
+    input: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+  ): Promise&lt;PermissionResult&gt;
+
+  // ===== 元数据方法 =====
+
+  // 是否启用这个工具
+  isEnabled(): boolean
+
+  // 是否是只读操作
+  isReadOnly(input: z.infer&lt;Input&gt;): boolean
+
+  // 是否是破坏性操作(删除、覆盖等)
+  isDestructive?(input: z.infer&lt;Input&gt;): boolean
+
+  // 是否可以并发执行
+  isConcurrencySafe(input: z.infer&lt;Input&gt;): boolean
+
+  // ===== UI 渲染方法 =====
+
+  // 渲染工具使用消息(在终端中显示)
+  renderToolUseMessage(
+    input: Partial&lt;z.infer&lt;Input&gt;&gt;,
+    options: { theme: ThemeName; verbose: boolean }
+  ): React.ReactNode
+
+  // 渲染工具结果消息
+  renderToolResultMessage?(
+    content: Output,
+    progressMessages: ProgressMessage&lt;P&gt;[],
+    options: { ... }
+  ): React.ReactNode
+
+  // 用户可见的工具名称
+  userFacingName(input: Partial&lt;z.infer&lt;Input&gt;&gt; | undefined): string
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这个类型定义在说什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-5</span>
+          <p>Tool 是一个<span class="glossary-term" data-tooltip="泛型类型 (Generic Type) 是可以接受类型参数的类型定义。就像函数可以接受值参数，泛型可以接受类型参数，让同一个定义适用于多种具体类型。">泛型类型</span>，可以指定输入类型、输出类型、进度类型。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">19-26</span>
+          <p><code>call()</code> 是工具的<strong>灵魂</strong>——这里是实际逻辑执行的地方。它接收参数、上下文、权限检查函数、进度回调，返回结果。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">34-43</span>
+          <p>双重安全机制：<code>validateInput</code> 检查输入合法性(路径是否存在、参数是否有效)，<code>checkPermissions</code> 检查用户是否允许(核心安全)。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">48-57</span>
+          <p>元数据方法帮助系统理解工具的性质：是否只读？是否破坏性？是否可并发？这些信息用于优化执行和保护用户。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">61-73</span>
+          <p>UI 渲染方法：工具不仅执行操作，还要在终端中漂亮地展示自己在做什么。这就是为什么你能看到彩色、格式化的输出。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 设计模式：接口契约</strong>
+        <p>Tool 类型定义了一个<strong>接口契约</strong>——所有工具必须实现这些方法。这让系统可以统一处理 40+ 个工具，而不需要为每个工具编写特殊逻辑。这是<span class="glossary-term" data-tooltip="多态 (Polymorphism) 是面向对象编程的核心概念，允许不同类型的对象通过相同的接口进行操作。">多态</span>的经典应用。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: BashTool 实例分析 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>实战案例：BashTool 如何工作</h2>
+      <p>让我们看看最常用的工具之一——<code>BashTool</code>。它负责执行所有终端命令。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/tools/BashTool/BashTool.tsx (第 95-172 行,精简版)</span>
+        </div>
+        <pre><code class="language-typescript">// 检查 bash 命令是否是搜索或读取操作
+export function isSearchOrReadBashCommand(command: string): {
+  isSearch: boolean;
+  isRead: boolean;
+  isList: boolean;
+} {
+  // 尝试解析命令
+  let partsWithOperators: string[];
+  try {
+    partsWithOperators = splitCommandWithOperators(command);
+  } catch {
+    // 如果解析失败(语法错误),不是搜索/读取命令
+    return { isSearch: false, isRead: false, isList: false };
+  }
+
+  if (partsWithOperators.length === 0) {
+    return { isSearch: false, isRead: false, isList: false };
+  }
+
+  let hasSearch = false;
+  let hasRead = false;
+  let hasList = false;
+  let hasNonNeutralCommand = false;
+
+  // 遍历命令的每个部分
+  for (const part of partsWithOperators) {
+    // 跳过重定向操作符
+    if (part === '>' || part === '>>' || part === '>&') {
+      continue;
+    }
+    // 跳过管道和逻辑操作符
+    if (part === '||' || part === '&&' || part === '|' || part === ';') {
+      continue;
+    }
+
+    const baseCommand = part.trim().split(/\s+/)[0];
+    if (!baseCommand) continue;
+
+    // 跳过语义中性的命令(echo, printf 等)
+    if (BASH_SEMANTIC_NEUTRAL_COMMANDS.has(baseCommand)) {
+      continue;
+    }
+
+    hasNonNeutralCommand = true;
+
+    // 检查是否是搜索/读取/列表命令
+    const isPartSearch = BASH_SEARCH_COMMANDS.has(baseCommand);
+    const isPartRead = BASH_READ_COMMANDS.has(baseCommand);
+    const isPartList = BASH_LIST_COMMANDS.has(baseCommand);
+
+    // 如果有任何部分不是搜索/读取/列表,整个命令就不可折叠
+    if (!isPartSearch && !isPartRead && !isPartList) {
+      return { isSearch: false, isRead: false, isList: false };
+    }
+
+    if (isPartSearch) hasSearch = true;
+    if (isPartRead) hasRead = true;
+    if (isPartList) hasList = true;
+  }
+
+  // 如果只有中性命令,不可折叠
+  if (!hasNonNeutralCommand) {
+    return { isSearch: false, isRead: false, isList: false };
+  }
+
+  return { isSearch: hasSearch, isRead: hasRead, isList: hasList };
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-6</span>
+          <p>定义函数：判断一个 bash 命令是否是"搜索"或"读取"操作。这用于 UI——这类命令的输出可以折叠显示。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">8-13</span>
+          <p>安全解析：尝试解析命令。如果命令语法错误，直接返回 false(不是搜索/读取命令)。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">25-42</span>
+          <p>遍历命令的每个部分。跳过<span class="glossary-term" data-tooltip="操作符 (Operator) 是编程语言中用于执行特定操作的符号，如管道 | 将一个命令的输出传递给另一个命令。">操作符</span>(管道、重定向)和"语义中性"的命令(echo, printf——它们不影响命令的读/写性质)。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">44-53</span>
+          <p>检查每个命令是否在预定义的搜索/读取/列表命令集合中。关键规则：<strong>所有部分</strong>都必须是这类命令，整个命令才算可折叠。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">全局逻辑</span>
+          <p>为什么需要这个？UI 优化。<code>cat file.txt</code> 的输出可以折叠，但 <code>rm -rf /</code> 绝对不能折叠——它是破坏性操作，必须显眼！</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>BashTool 还定义了几个重要的命令集合：</p>
+      <div class="code-snippet">
+        <code class="language-typescript">// 搜索命令
+const BASH_SEARCH_COMMANDS = new Set([
+  'find', 'grep', 'rg', 'ag', 'ack', 'locate', 'which', 'whereis'
+]);
+
+// 读取/查看命令
+const BASH_READ_COMMANDS = new Set([
+  'cat', 'head', 'tail', 'less', 'more',
+  'wc', 'stat', 'file', 'strings',
+  'jq', 'awk', 'cut', 'sort', 'uniq', 'tr'
+]);
+
+// 列表命令
+const BASH_LIST_COMMANDS = new Set([
+  'ls', 'tree', 'du'
+]);</code>
+      </div>
+      <p>这些集合帮助系统理解命令的<strong>语义</strong>——不仅仅执行，还要理解它在做什么。</p>
+    </div>
+  </div>
+
+  <!-- Screen 4: 权限系统深入 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>权限系统：保护用户的最后防线</h2>
+      <p>Claude Code 的权限系统是它最重要的安全机制。让我们看看它如何工作。</p>
+    </div>
+
+    <div class="permission-flow-animation" id="permission-check-flow" data-steps='[
+      {"node": "工具调用", "action": "AI 想执行: git push origin main", "status": "pending"},
+      {"node": "验证输入", "action": "检查参数是否合法", "status": "pending"},
+      {"node": "检查规则", "action": "查询权限规则数据库", "status": "pending"},
+      {"node": "规则匹配", "action": "找到规则: git push → Ask", "status": "pending"},
+      {"node": "询问用户", "action": "显示权限对话框", "status": "pending"},
+      {"node": "用户决定", "action": "用户点击「允许」", "status": "pending"},
+      {"node": "记录决策", "action": "保存到权限历史", "status": "pending"},
+      {"node": "执行工具", "action": "运行 git push", "status": "success"}
+    ]'></div>
+
+    <div class="content-narrow">
+      <h3>权限检查的三个层级</h3>
+
+      <div class="permission-levels">
+        <div class="permission-level">
+          <div class="level-badge" style="--badge-color: var(--color-success)">总是允许</div>
+          <h4>Always Allow</h4>
+          <p>自动批准的操作，不需要询问</p>
+          <ul>
+            <li>读取项目目录内的文件</li>
+            <li>执行 <code>git status</code>, <code>git diff</code></li>
+            <li>列出目录 <code>ls</code></li>
+          </ul>
+        </div>
+
+        <div class="permission-level">
+          <div class="level-badge" style="--badge-color: var(--color-info)">总是询问</div>
+          <h4>Always Ask</h4>
+          <p>每次都需要用户确认</p>
+          <ul>
+            <li>修改文件</li>
+            <li>执行 <code>git push</code>, <code>git commit</code></li>
+            <li>运行可能有副作用的命令</li>
+          </ul>
+        </div>
+
+        <div class="permission-level">
+          <div class="level-badge" style="--badge-color: var(--color-error)">总是拒绝</div>
+          <h4>Always Deny</h4>
+          <p>自动拒绝，不允许执行</p>
+          <ul>
+            <li>访问敏感目录(如 <code>~/.ssh</code>)</li>
+            <li>执行危险命令(如 <code>rm -rf /</code>)</li>
+            <li>用户明确禁止的操作</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="permission-dialog-example">
+        <h4>权限对话框示例</h4>
+        <div class="mock-dialog">
+          <div class="dialog-header">
+            <span class="dialog-icon">🛡️</span>
+            <span class="dialog-title">权限请求</span>
+          </div>
+          <div class="dialog-body">
+            <p class="dialog-question">Claude 想要执行以下操作：</p>
+            <div class="dialog-tool-call">
+              <div class="tool-call-name">Bash</div>
+              <div class="tool-call-input"><code>git push origin main</code></div>
+            </div>
+            <p class="dialog-warning">⚠️ 这将修改远程仓库</p>
+          </div>
+          <div class="dialog-actions">
+            <button class="dialog-btn btn-deny">拒绝</button>
+            <button class="dialog-btn btn-allow-once">仅此一次</button>
+            <button class="dialog-btn btn-allow-always">总是允许</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 为什么需要这么复杂的权限系统？</strong>
+        <p>因为 AI 可能会犯错。它可能误解你的意图，生成错误的命令，或者被<span class="glossary-term" data-tooltip="提示注入 (Prompt Injection) 是一种攻击方式，通过在输入中嵌入特殊指令来操纵 AI 的行为。">提示注入</span>攻击利用。权限系统确保即使 AI 想做坏事，它也做不了——除非你明确同意。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: 权限规则代码 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>权限规则的代码实现</h2>
+      <p>让我们看看 <code>src/utils/permissions/permissions.ts</code> 中权限检查的实际代码。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/utils/permissions/permissions.ts (第 1-100 行,精简版)</span>
+        </div>
+        <pre><code class="language-typescript">import type { ToolPermissionContext, ToolUseContext } from '../../Tool.js'
+import type { PermissionResult } from './PermissionResult.js'
+
+// 权限检查的主入口
+export async function checkPermissions(
+  toolName: string,
+  input: Record&lt;string, unknown&gt;,
+  context: ToolUseContext
+): Promise&lt;PermissionResult&gt; {
+  const { mode, alwaysAllowRules, alwaysDenyRules, alwaysAskRules } =
+    context.permissionContext
+
+  // 第 1 步：检查「总是拒绝」规则
+  const denyRule = getDenyRuleForTool(context.permissionContext, {
+    name: toolName,
+    ...input
+  })
+
+  if (denyRule) {
+    return {
+      behavior: 'deny',
+      reason: 'rule',
+      message: `操作被规则拒绝: ${denyRule}`
+    }
+  }
+
+  // 第 2 步：检查「总是允许」规则
+  const allowRule = getAllowRuleForTool(context.permissionContext, {
+    name: toolName,
+    ...input
+  })
+
+  if (allowRule) {
+    return {
+      behavior: 'allow',
+      updatedInput: input
+    }
+  }
+
+  // 第 3 步：检查「总是询问」规则
+  const askRule = getAskRuleForTool(context.permissionContext, {
+    name: toolName,
+    ...input
+  })
+
+  if (askRule) {
+    return {
+      behavior: 'ask',
+      message: '需要用户确认此操作'
+    }
+  }
+
+  // 第 4 步：根据权限模式决定默认行为
+  if (mode === 'auto') {
+    // 自动模式：大多数操作自动允许
+    return { behavior: 'allow', updatedInput: input }
+  } else if (mode === 'plan') {
+    // 计划模式：询问用户
+    return { behavior: 'ask' }
+  } else {
+    // 默认模式：对破坏性操作询问
+    const isDestructive = await isDestructiveOperation(toolName, input)
+    return isDestructive
+      ? { behavior: 'ask' }
+      : { behavior: 'allow', updatedInput: input }
+  }
+}
+
+// 检查操作是否是破坏性的
+async function isDestructiveOperation(
+  toolName: string,
+  input: Record&lt;string, unknown&gt;
+): Promise&lt;boolean&gt; {
+  // 文件删除、覆盖、git push 等都是破坏性操作
+  if (toolName === 'Bash') {
+    const command = input.command as string
+    return (
+      command.includes('rm ') ||
+      command.includes('git push') ||
+      command.includes('&gt;') // 重定向覆盖文件
+    )
+  }
+
+  if (toolName === 'Edit') {
+    // 文件编辑总是破坏性的(修改现有内容)
+    return true
+  }
+
+  return false
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>权限检查的逻辑</h4>
+        <div class="translation-item">
+          <span class="line-num">5-12</span>
+          <p>主函数 <code>checkPermissions</code> 接收工具名、输入参数、上下文，返回权限决策。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">14-25</span>
+          <p><strong>第一优先级：拒绝规则</strong>。如果有明确的拒绝规则，立即返回拒绝，不继续检查。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">27-37</span>
+          <p><strong>第二优先级：允许规则</strong>。如果有允许规则且没有拒绝规则，自动允许。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">39-49</span>
+          <p><strong>第三优先级：询问规则</strong>。明确标记为"需要询问"的操作。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">51-64</span>
+          <p><strong>默认行为</strong>。如果没有匹配的规则，根据权限模式(auto/plan/default)和操作性质(是否破坏性)决定。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">67-88</span>
+          <p>辅助函数：判断操作是否破坏性。例如 <code>rm</code>, <code>git push</code>, 文件编辑都是破坏性的。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p>权限系统使用<strong>优先级链</strong>：拒绝 > 允许 > 询问 > 默认。这确保安全规则(拒绝)永远优先于便利性(自动允许)。这是"安全优先"设计原则的体现。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="tools-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 工具生命周期的正确顺序是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>执行 → 权限检查 → 返回结果</span>
+            <span class="quiz-feedback">不对！权限检查必须在执行之前。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>定义 Schema → 执行 → 权限检查 → 返回结果</span>
+            <span class="quiz-feedback">几乎对了，但权限检查在执行之前。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>定义 Schema → AI 决定调用 → 权限检查 → 执行 → 返回结果 → AI 处理</span>
+            <span class="quiz-feedback">✅ 完美！这是完整的生命周期，权限检查是安全关口。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>AI 决定 → 返回结果 → 执行</span>
+            <span class="quiz-feedback">顺序完全错了，而且缺少权限检查。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 为什么 BashTool 需要 <code>isSearchOrReadBashCommand()</code> 函数？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>为了安全检查——防止危险命令</span>
+            <span class="quiz-feedback">不完全对。安全检查在权限系统中，这个函数是为了 UI。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>为了 UI 优化——判断命令输出是否可以折叠显示</span>
+            <span class="quiz-feedback">✅ 正确！<code>cat file.txt</code> 的输出可以折叠，但破坏性命令必须显眼。这是用户体验优化。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>为了性能——减少命令执行时间</span>
+            <span class="quiz-feedback">这个函数不影响执行，只影响显示。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>为了兼容性——支持旧版本 bash</span>
+            <span class="quiz-feedback">这与 bash 版本无关。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="0">
+        <p><strong>问题 3:</strong> 权限检查的优先级是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>拒绝规则 > 允许规则 > 询问规则 > 默认行为</span>
+            <span class="quiz-feedback">✅ 完全正确！安全(拒绝)永远优先于便利(允许)。这是"安全优先"设计原则。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>允许规则 > 拒绝规则 > 询问规则 > 默认行为</span>
+            <span class="quiz-feedback">这很危险！允许规则不能覆盖拒绝规则。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>询问规则 > 拒绝规则 > 允许规则 > 默认行为</span>
+            <span class="quiz-feedback">不对。拒绝规则必须是最高优先级。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>所有规则优先级相同</span>
+            <span class="quiz-feedback">必须有优先级，否则会有冲突。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="3">
+        <p><strong>问题 4:</strong> Tool 类型定义中，哪个方法是工具的"灵魂"——实际执行逻辑的地方？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="0">
+            <span>checkPermissions()</span>
+            <span class="quiz-feedback">这是安全检查，不是执行逻辑。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="1">
+            <span>description()</span>
+            <span class="quiz-feedback">这只是生成描述文本，不执行操作。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="2">
+            <span>renderToolUseMessage()</span>
+            <span class="quiz-feedback">这是 UI 渲染，不是业务逻辑。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="3">
+            <span>call()</span>
+            <span class="quiz-feedback">✅ 正确！<code>call()</code> 是工具的核心——这里是实际读取文件、执行命令、修改代码的地方。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 5:</strong> 为什么需要 <code>isDestructive()</code> 方法？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="0">
+            <span>为了记录日志</span>
+            <span class="quiz-feedback">日志记录不需要区分破坏性。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="1">
+            <span>为了计算成本</span>
+            <span class="quiz-feedback">成本与操作性质无关。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="2">
+            <span>为了决定是否需要询问用户——破坏性操作默认需要确认</span>
+            <span class="quiz-feedback">✅ 正确！删除文件、git push 等破坏性操作即使没有明确的"询问规则"，系统也会默认要求确认。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="3">
+            <span>为了优化执行速度</span>
+            <span class="quiz-feedback">性能与破坏性无关。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 7: 总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你已经掌握了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🔄</div>
+          <h3>工具生命周期</h3>
+          <p>定义 Schema → AI 调用 → 权限检查 → 执行 → 返回结果 → AI 处理</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">📐</div>
+          <h3>Tool 类型契约</h3>
+          <p>所有工具必须实现的接口：call(), checkPermissions(), render 方法等</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">⚙️</div>
+          <h3>BashTool 实现</h3>
+          <p>解析命令语义、判断可折叠性、执行 shell 命令的完整实现</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🛡️</div>
+          <h3>权限系统</h3>
+          <p>拒绝 > 允许 > 询问 > 默认的优先级链，保护用户安全</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="key-learnings">
+        <h3>核心要点</h3>
+        <ul>
+          <li><strong>安全优先</strong>：权限检查在执行之前，拒绝规则优先级最高</li>
+          <li><strong>接口契约</strong>：Tool 类型定义了统一接口，让系统可以多态处理所有工具</li>
+          <li><strong>语义理解</strong>：工具不仅执行操作，还理解操作的性质(只读/破坏性/搜索等)</li>
+          <li><strong>用户体验</strong>：通过可折叠显示、彩色渲染等优化终端 UI</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你理解了工具如何工作。接下来，让我们看看 Claude Code 如何与外部世界对话——MCP、API、LSP 等服务层。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 4: 与外部世界对话</strong> →</p>
+    </div>
+  </div>
+
+</section>
+<section class="module" id="module-4" data-module-number="4">
+
+  <!-- Screen 1: 模块介绍 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>与外部世界对话</h1>
+      <p class="lead">Claude Code 不是一个孤岛。它需要与外部系统交互：调用 AI API、连接外部工具、理解代码语义。</p>
+      <p>这一模块，我们将探索 Claude Code 如何与外部世界对话。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="interaction-grid">
+        <div class="interaction-card">
+          <div class="interaction-icon">🌐</div>
+          <h3>Anthropic API</h3>
+          <p>与 Claude AI 模型对话</p>
+        </div>
+        <div class="interaction-card">
+          <div class="interaction-icon">🔌</div>
+          <h3>MCP</h3>
+          <p>连接外部工具服务器</p>
+        </div>
+        <div class="interaction-card">
+          <div class="interaction-icon">💡</div>
+          <h3>LSP</h3>
+          <p>代码智能与自动补全</p>
+        </div>
+        <div class="interaction-card">
+          <div class="interaction-icon">🔐</div>
+          <h3>OAuth</h3>
+          <p>安全认证流程</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: Anthropic API -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>核心对话：Anthropic API</h2>
+      <p>当你向 Claude Code 提问时，它需要调用 Anthropic 的 API 来获取 AI 的响应。这个过程发生在 <code>QueryEngine.ts</code> 中。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/services/api/claude.ts</span>
+        </div>
+        <pre><code class="language-typescript">// 导入 Anthropic SDK
+import type {
+  BetaMessage,
+  BetaMessageStreamParams,
+  BetaRawMessageStreamEvent,
+  MessageParam,
+} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+
+// 调用 API 的核心函数
+export async function callClaudeAPI(
+  messages: MessageParam[],
+  systemPrompt: string,
+  tools: Tool[],
+  model: string
+): Promise<Stream<BetaRawMessageStreamEvent>> {
+  // 构建 API 请求参数
+  const params: BetaMessageStreamParams = {
+    model,
+    max_tokens: getModelMaxOutputTokens(),
+    messages,
+    system: systemPrompt,
+    tools: tools.map(toolToAPISchema),
+    stream: true,
+  }
+
+  // 发送流式请求
+  return anthropic.messages.stream(params)
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-6</span>
+          <p>导入 Anthropic SDK 的类型定义——这些都是来自官方 SDK 包。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">9-14</span>
+          <p>定义函数签名：接收消息历史、系统提示、工具列表和模型名称。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">16-23</span>
+          <p>构建 API 请求：包含对话历史、工具定义、最大输出长度等参数。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">26</span>
+          <p>使用 <strong>流式 API</strong>——AI 的响应会一点点返回，而不是等待全部完成。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 为什么用流式 API？</strong>
+        <p>想象你在等待一个很长的回答。流式 API 让你可以<strong>边读边等</strong>——每收到一个词就显示出来，而不是等待整个回答完成。这让体验更流畅。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: MCP (Model Context Protocol) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>连接外部工具：MCP</h2>
+      <p><strong>Model Context Protocol (MCP)</strong> 是一个让 AI 应用连接外部工具的标准协议。想象它是一个"插座"——你可以插入各种工具服务器。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="mcp-diagram">
+        <div class="mcp-layer">
+          <div class="mcp-box mcp-claude">Claude Code</div>
+        </div>
+        <div class="mcp-arrow">↓ MCP 协议</div>
+        <div class="mcp-layer">
+          <div class="mcp-box mcp-server">GitHub 服务器</div>
+          <div class="mcp-box mcp-server">数据库服务器</div>
+          <div class="mcp-box mcp-server">Slack 服务器</div>
+        </div>
+        <div class="mcp-arrow">↓ 提供工具</div>
+        <div class="mcp-layer">
+          <div class="mcp-tool">创建 Issue</div>
+          <div class="mcp-tool">查询数据</div>
+          <div class="mcp-tool">发送消息</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/services/mcp/client.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+
+// 连接到 MCP 服务器
+export async function connectToMCPServer(
+  serverConfig: McpServerConfig
+): Promise<MCPServerConnection> {
+  // 创建传输层（stdio = 标准输入输出）
+  const transport = new StdioClientTransport({
+    command: serverConfig.command,
+    args: serverConfig.args,
+    env: serverConfig.env,
+  })
+
+  // 创建客户端
+  const client = new Client({
+    name: 'claude-code',
+    version: '1.0.0',
+  })
+
+  // 连接
+  await client.connect(transport)
+
+  // 列出服务器提供的工具
+  const tools = await client.listTools()
+
+  return { client, tools }
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>MCP 连接流程</h4>
+        <div class="translation-item">
+          <span class="line-num">1-2</span>
+          <p>导入 MCP SDK——这是 Anthropic 提供的标准库。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">9-13</span>
+          <p>创建传输层：通过<span class="glossary-term" data-tooltip="stdio = 标准输入输出。这是进程间通信的一种方式，通过标准输入/输出管道传递消息。">stdio</span>与子进程通信。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">16-19</span>
+          <p>创建 MCP 客户端，标识自己是 "claude-code"。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">22-25</span>
+          <p>连接服务器，并获取它提供的工具列表。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 为什么需要 MCP？</strong>
+        <p>Claude Code 自带的工具是固定的（读文件、执行命令等）。但你可能想让它访问<strong>你的</strong>系统——比如你的数据库、Jira、内部 API。MCP 让你可以轻松添加这些能力，而不需要修改 Claude Code 的源代码。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: LSP (Language Server Protocol) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>理解代码：LSP</h2>
+      <p><strong>Language Server Protocol (LSP)</strong> 是微软创造的协议，让编辑器能够获得代码智能功能——比如"跳转到定义"、"查找引用"、类型提示等。</p>
+      <p>Claude Code 使用 LSP 来更好地<strong>理解代码结构</strong>。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="lsp-example">
+        <div class="lsp-question">
+          <strong>Claude 想知道：</strong><br>
+          <code>authenticate()</code> 函数在哪里定义的？
+        </div>
+        <div class="lsp-arrow">↓ 问 LSP 服务器</div>
+        <div class="lsp-answer">
+          <strong>LSP 返回：</strong><br>
+          文件: <code>src/auth/login.ts</code><br>
+          行号: 42<br>
+          类型: <code>(username: string, password: string) => Promise&lt;User&gt;</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/services/lsp/manager.ts</span>
+        </div>
+        <pre><code class="language-typescript">/**
+ * 全局单例的 LSP 服务器管理器。
+ * 在 Claude Code 启动时初始化。
+ */
+let lspManagerInstance: LSPServerManager | undefined
+
+/**
+ * 获取 LSP 服务器管理器实例。
+ * 如果尚未初始化，返回 undefined。
+ */
+export function getLspServerManager(): LSPServerManager | undefined {
+  // 如果初始化失败，不返回损坏的实例
+  if (initializationState === 'failed') {
+    return undefined
+  }
+  return lspManagerInstance
+}
+
+// LSP 可以做什么？
+interface LSPCapabilities {
+  gotoDefinition(file: string, line: number): Promise<Location>
+  findReferences(file: string, line: number): Promise<Location[]>
+  getHover(file: string, line: number): Promise<string>
+  getCompletions(file: string, line: number): Promise<string[]>
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>LSP 提供的能力</h4>
+        <div class="translation-item">
+          <span class="line-num">5</span>
+          <p>全局单例——整个 Claude Code 只有一个 LSP 管理器。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">11-17</span>
+          <p>安全获取实例：如果初始化失败，返回 undefined 而不是损坏的对象。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">20-25</span>
+          <p>LSP 能做什么？跳转定义、查找引用、悬停提示、自动补全……</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 LSP 如何帮助 Claude？</strong>
+        <p>当 Claude 读取一个函数调用时，它可以问 LSP："这个函数在哪定义的？参数类型是什么？"这让 Claude 能够<strong>更准确地理解代码逻辑</strong>，就像一个真正的开发者使用 IDE 一样。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: OAuth 认证流程 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>安全认证：OAuth</h2>
+      <p>Claude Code 需要证明"你是谁"才能调用 Anthropic API。这通过 <strong>OAuth 2.0</strong> 协议完成——一个业界标准的授权流程。</p>
+    </div>
+
+    <div class="flow-animation" id="oauth-flow" data-steps='[
+      {"from": "用户", "to": "Claude Code", "label": "运行 claude login", "icon": "🖥️"},
+      {"from": "Claude Code", "to": "浏览器", "label": "打开授权页面", "icon": "🌐"},
+      {"from": "浏览器", "to": "Anthropic 服务器", "label": "用户登录并授权", "icon": "🔐"},
+      {"from": "Anthropic 服务器", "to": "Claude Code", "label": "返回 access_token", "icon": "🎟️"},
+      {"from": "Claude Code", "to": "钥匙串", "label": "安全存储 token", "icon": "🔑"},
+      {"from": "Claude Code", "to": "Anthropic API", "label": "带 token 调用 API", "icon": "✅"}
+    ]'></div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/constants/oauth.ts</span>
+        </div>
+        <pre><code class="language-typescript">// OAuth 授权范围
+export const CLAUDE_AI_OAUTH_SCOPES = [
+  'user:profile',           // 读取用户资料
+  'user:inference',         // 调用 AI 推理 API
+  'user:sessions:claude_code', // 会话管理
+  'user:mcp_servers',       // MCP 服务器配置
+  'user:file_upload',       // 文件上传
+] as const
+
+// OAuth 配置
+export function getOauthConfig() {
+  return {
+    clientId: 'claude-code-cli',
+    authUrl: 'https://auth.anthropic.com/oauth/authorize',
+    tokenUrl: 'https://auth.anthropic.com/oauth/token',
+    scopes: CLAUDE_AI_OAUTH_SCOPES,
+    redirectUri: 'http://127.0.0.1:8910/callback',
+  }
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>OAuth 配置解读</h4>
+        <div class="translation-item">
+          <span class="line-num">2-8</span>
+          <p><strong>授权范围 (scopes)</strong>：定义 Claude Code 可以做什么——就像手机 App 要求的权限。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">12-13</span>
+          <p>客户端 ID：标识这是"Claude Code CLI"应用。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">14-15</span>
+          <p>授权和令牌 URL：Anthropic 的 OAuth 服务器地址。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">17</span>
+          <p>回调 URL：用户授权后，浏览器会跳转到这个本地地址，Claude Code 在这里监听结果。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 为什么用 OAuth 而不是 API Key？</strong>
+        <p>API Key 是固定的密码——如果泄露就很危险。OAuth token 可以<strong>定期刷新</strong>、可以<strong>限制权限范围</strong>、可以<strong>随时撤销</strong>。这更安全，也是现代应用的标准做法。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="external-quiz">
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 1:</strong> 为什么 Claude Code 使用流式 API 而不是一次性获取完整响应？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>流式 API 更便宜</span>
+            <span class="quiz-feedback">不对。流式和非流式 API 的成本是一样的。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>用户可以边等边看到响应，体验更好</span>
+            <span class="quiz-feedback">✅ 正确！就像聊天软件一样，一个字一个字显示，而不是等待整段话完成。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>流式 API 速度更快</span>
+            <span class="quiz-feedback">实际上总时间差不多，但用户感知的等待时间更短。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 2:</strong> MCP (Model Context Protocol) 的主要作用是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>加速 API 调用</span>
+            <span class="quiz-feedback">不是。MCP 不是用来优化性能的。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>加密通信数据</span>
+            <span class="quiz-feedback">不对。MCP 是协议，不是加密工具。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>让 Claude Code 可以连接外部工具服务器，扩展能力</span>
+            <span class="quiz-feedback">✅ 对！MCP 就像一个"插座"，让你可以插入各种自定义工具。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 3:</strong> LSP 如何帮助 Claude 更好地理解代码？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>LSP 直接运行代码测试</span>
+            <span class="quiz-feedback">不对。LSP 不执行代码，它只提供静态分析。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>LSP 提供代码跳转、类型信息等，像 IDE 一样</span>
+            <span class="quiz-feedback">✅ 完全正确！LSP 让 Claude 能像开发者使用 IDE 一样理解代码结构。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>LSP 自动修复代码错误</span>
+            <span class="quiz-feedback">LSP 可以提供修复建议，但不会自动修复。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 7: 总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你学到了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🌐</div>
+          <h3>Anthropic API</h3>
+          <p>通过流式 API 调用 Claude 模型，边读边显示</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔌</div>
+          <h3>MCP 协议</h3>
+          <p>连接外部工具服务器，扩展 Claude Code 的能力</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">💡</div>
+          <h3>LSP 协议</h3>
+          <p>提供代码智能，让 AI 像开发者一样理解代码</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔐</div>
+          <h3>OAuth 认证</h3>
+          <p>安全、可撤销的授权机制，比 API Key 更好</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你知道 Claude Code 如何与外部系统对话了。接下来，让我们看看代码中的<strong>聪明技巧</strong>。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 5: 聪明的技巧</strong> →</p>
+    </div>
+  </div>
+
+</section>
+<section class="module" id="module-5" data-module-number="5">
+
+  <!-- Screen 1: 模块介绍 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>聪明的技巧</h1>
+      <p class="lead">好代码不只是"能跑"——它要快、要优雅、要容易维护。Claude Code 里藏着很多聪明的模式和技巧。</p>
+      <p>这一模块，我们将学习这些技巧——不只是看代码，更重要的是理解<strong>为什么</strong>这样做，以及你如何用这些知识<strong>指导 AI 写出更好的代码</strong>。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="patterns-grid">
+        <div class="pattern-card">
+          <div class="pattern-icon">⚡</div>
+          <h3>并行预取</h3>
+          <p>在后台提前加载慢操作</p>
+        </div>
+        <div class="pattern-card">
+          <div class="pattern-icon">🪄</div>
+          <h3>懒加载</h3>
+          <p>只在需要时才导入模块</p>
+        </div>
+        <div class="pattern-card">
+          <div class="pattern-icon">🎚️</div>
+          <h3>特性开关</h3>
+          <p>动态控制功能的启用</p>
+        </div>
+        <div class="pattern-card">
+          <div class="pattern-icon">🐝</div>
+          <h3>Agent Swarms</h3>
+          <p>多个 AI 协作完成任务</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: 并行预取 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 1: 并行预取 (Parallel Prefetching)</h2>
+      <p>还记得 <code>main.tsx</code> 的开头吗？它在导入其他模块之前就启动了两个操作。这就是<strong>并行预取</strong>。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/main.tsx (1-20 行)</span>
+        </div>
+        <pre><code class="language-typescript">// 这些副作用必须在所有其他导入之前运行:
+// 1. profileCheckpoint 在模块加载前标记入口点
+// 2. startMdmRawRead 启动 MDM 子进程
+// 3. startKeychainPrefetch 预取钥匙串读取
+import { profileCheckpoint } from './utils/startupProfiler.js';
+
+profileCheckpoint('main_tsx_entry');
+import { startMdmRawRead } from './utils/settings/mdm/rawRead.js';
+
+// 🚀 启动慢操作 #1
+startMdmRawRead();
+import {
+  ensureKeychainPrefetchCompleted,
+  startKeychainPrefetch
+} from './utils/secureStorage/keychainPrefetch.js';
+
+// 🚀 启动慢操作 #2
+startKeychainPrefetch();
+
+// 然后才导入其他模块...
+import { feature } from 'bun:bundle';
+import { Command as CommanderCommand } from '@commander-js/extra-typings';
+import React from 'react';</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>为什么这样做？</h4>
+        <div class="translation-item">
+          <span class="line-num">11</span>
+          <p><code>startMdmRawRead()</code> 启动一个子进程读取企业管理设置——很慢（~30ms）。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">18</span>
+          <p><code>startKeychainPrefetch()</code> 从 macOS 钥匙串读取密码——也很慢（~65ms）。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">20-22</span>
+          <p>在这些操作运行的同时，主程序继续导入模块（~135ms）。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual-block">
+      <div class="timeline-comparison">
+        <div class="timeline-bad">
+          <h4>❌ 串行执行（慢）</h4>
+          <div class="timeline-bar">
+            <div class="timeline-segment" style="width: 30%; background: #E8836C;">MDM 读取 (30ms)</div>
+            <div class="timeline-segment" style="width: 40%; background: #D4A843;">钥匙串读取 (65ms)</div>
+            <div class="timeline-segment" style="width: 30%; background: #2A7B9B;">模块导入 (135ms)</div>
+          </div>
+          <p class="timeline-total">总时间: <strong>230ms</strong></p>
+        </div>
+        <div class="timeline-good">
+          <h4>✅ 并行执行（快）</h4>
+          <div class="timeline-bar">
+            <div class="timeline-segment parallel" style="width: 100%; background: linear-gradient(to right, #E8836C 30%, #D4A843 50%, #2A7B9B 100%);">
+              所有操作并行
+            </div>
+          </div>
+          <p class="timeline-total">总时间: <strong>135ms</strong> 🚀</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 关键洞察</strong>
+        <p>I/O 操作（读文件、网络请求）通常是<strong>等待密集型</strong>的——CPU 在等待硬盘或网络。并行预取让 CPU 在等待的同时做其他事情。</p>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："找出所有耗时的 I/O 操作，让它们尽早启动，并行运行。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 懒加载 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 2: 懒加载 (Lazy Loading)</h2>
+      <p>不是所有代码都需要立即加载。<strong>懒加载</strong>的思想是：只在真正需要时才导入模块。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/QueryEngine.ts (85-89 行)</span>
+        </div>
+        <pre><code class="language-typescript">// 懒加载：MessageSelector.tsx 拉入 React/ink；
+// 只在查询时需要消息过滤才加载
+/* eslint-disable @typescript-eslint/no-require-imports */
+const messageSelector =
+  (): typeof import('src/components/MessageSelector.js') =>
+    require('src/components/MessageSelector.js')
+
+// 使用时才调用
+function filterMessages(messages: Message[]) {
+  const selector = messageSelector() // 👈 这时才加载
+  return selector.filterByRelevance(messages)
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>为什么用 require() 而不是 import？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-2</span>
+          <p>注释解释了原因：<code>MessageSelector.tsx</code> 依赖 React/Ink，这些很重。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">4-6</span>
+          <p>定义一个<strong>懒加载函数</strong>：返回动态 <code>require()</code>。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">10</span>
+          <p>只有当 <code>filterMessages()</code> 被调用时，才会加载 MessageSelector 模块。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual-block">
+      <div class="lazy-loading-diagram">
+        <div class="lazy-step">
+          <div class="lazy-icon">🏁</div>
+          <h4>启动时</h4>
+          <p>只定义函数，不加载模块<br><span class="lazy-size">0 KB</span></p>
+        </div>
+        <div class="lazy-arrow">→</div>
+        <div class="lazy-step">
+          <div class="lazy-icon">🖱️</div>
+          <h4>用户操作</h4>
+          <p>需要过滤消息功能</p>
+        </div>
+        <div class="lazy-arrow">→</div>
+        <div class="lazy-step">
+          <div class="lazy-icon">📦</div>
+          <h4>加载时</h4>
+          <p>才导入 MessageSelector<br><span class="lazy-size">+250 KB</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 什么时候用懒加载？</strong>
+        <ul>
+          <li>模块很大（比如 React 组件库）</li>
+          <li>功能不一定会用到（比如高级设置）</li>
+          <li>启动性能很关键</li>
+        </ul>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："识别不常用或体积大的模块，用懒加载延迟导入。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: 特性开关 (Feature Flags) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 3: 特性开关 (Feature Flags)</h2>
+      <p><strong>特性开关</strong>允许你在不修改代码的情况下，动态启用或禁用某些功能。Claude Code 使用 <code>bun:bundle</code> 的 <code>feature()</code> 函数实现这一点。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/QueryEngine.ts (115-125 行)</span>
+        </div>
+        <pre><code class="language-typescript">import { feature } from 'bun:bundle'
+
+// 根据特性开关动态导入模块
+const snipModule = feature('HISTORY_SNIP')
+  ? () => require('./utils/historySnip.js')
+  : null
+
+// 使用时检查
+function processHistory(messages: Message[]) {
+  if (feature('HISTORY_SNIP') && snipModule) {
+    const snip = snipModule()
+    return snip.compressHistory(messages)
+  }
+  return messages
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>特性开关的威力</h4>
+        <div class="translation-item">
+          <span class="line-num">1</span>
+          <p><code>feature()</code> 来自 Bun 打包器——在<strong>构建时</strong>决定。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">4-6</span>
+          <p>如果 <code>HISTORY_SNIP</code> 禁用，<code>snipModule</code> 就是 <code>null</code>，代码会被<strong>完全剔除</strong>。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">10-12</span>
+          <p>运行时再次检查——双重保护。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual-block">
+      <div class="feature-flags-example">
+        <div class="flag-scenario">
+          <h4>🧪 实验性功能</h4>
+          <pre><code>if (feature('EXPERIMENTAL_AI_TUNING')) {
+  applyAdvancedPromptOptimizations()
+}</code></pre>
+          <p>只在内部测试时启用，生产环境关闭</p>
+        </div>
+        <div class="flag-scenario">
+          <h4>🎭 A/B 测试</h4>
+          <pre><code>const useNewUI = feature('NEW_UI_DESIGN')
+renderUI(useNewUI ? NewComponent : OldComponent)</code></pre>
+          <p>一半用户看到新 UI，一半看到旧 UI</p>
+        </div>
+        <div class="flag-scenario">
+          <h4>🚨 应急开关</h4>
+          <pre><code>if (feature('ENABLE_REMOTE_AGENTS')) {
+  launchRemoteAgent()
+}</code></pre>
+          <p>如果远程服务出问题，可以立即关闭</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 为什么用特性开关？</strong>
+        <p>想象你开发了一个新功能，但不确定它是否稳定。特性开关让你可以：</p>
+        <ul>
+          <li>先给内部团队测试</li>
+          <li>逐步推广（1% → 10% → 50% → 100%）</li>
+          <li>如果出问题，一键关闭，不需要重新部署</li>
+        </ul>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："新功能要加特性开关，方便控制和回滚。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: Agent Swarms (多代理协作) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 4: Agent Swarms (多代理协作)</h2>
+      <p>一个复杂任务，一个 AI 可能搞不定。但如果有<strong>多个 AI 协作</strong>呢？每个专注一个子任务，最后汇总结果。</p>
+      <p>这就是 <strong>Agent Swarms</strong>——一群 AI "蜜蜂"协作完成大任务。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="swarm-visualization">
+        <div class="swarm-task">
+          <h4>大任务：重构整个认证系统</h4>
+        </div>
+        <div class="swarm-arrow">↓ 拆分</div>
+        <div class="swarm-agents">
+          <div class="swarm-agent" style="border-color: var(--color-actor-1);">
+            <div class="agent-name">Agent 1</div>
+            <div class="agent-task">审计现有代码</div>
+          </div>
+          <div class="swarm-agent" style="border-color: var(--color-actor-2);">
+            <div class="agent-name">Agent 2</div>
+            <div class="agent-task">设计新架构</div>
+          </div>
+          <div class="swarm-agent" style="border-color: var(--color-actor-3);">
+            <div class="agent-name">Agent 3</div>
+            <div class="agent-task">迁移数据库</div>
+          </div>
+          <div class="swarm-agent" style="border-color: var(--color-actor-4);">
+            <div class="agent-name">Agent 4</div>
+            <div class="agent-task">更新测试</div>
+          </div>
+        </div>
+        <div class="swarm-arrow">↓ 汇总</div>
+        <div class="swarm-result">
+          <h4>✅ 完成：所有结果合并</h4>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/utils/agentSwarmsEnabled.ts</span>
+        </div>
+        <pre><code class="language-typescript">/**
+ * 检查是否启用 Agent Teams/Swarms 功能。
+ * 这是所有多代理功能的统一开关。
+ */
+export function isAgentSwarmsEnabled(): boolean {
+  // 内部版本：始终开启
+  if (process.env.USER_TYPE === 'ant') {
+    return true
+  }
+
+  // 外部版本：需要实验性环境变量或 --agent-teams 标志
+  if (
+    !isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) &&
+    !isAgentTeamsFlagSet()
+  ) {
+    return false
+  }
+
+  // 通过 GrowthBook 的紧急开关控制
+  if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_flint', true)) {
+    return false
+  }
+
+  return true
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>多层门禁控制</h4>
+        <div class="translation-item">
+          <span class="line-num">7-9</span>
+          <p>内部用户（Anthropic 员工）始终可用——方便测试。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">12-17</span>
+          <p>外部用户需要<strong>明确选择</strong>：设置环境变量或传 <code>--agent-teams</code> 标志。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">20-22</span>
+          <p>最后检查<strong>紧急开关</strong>——如果功能出问题，可以远程关闭。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 什么时候用 Agent Swarms？</strong>
+        <ul>
+          <li>任务可以并行拆分（比如处理多个文件）</li>
+          <li>需要不同视角（一个 Agent 写代码，另一个审查）</li>
+          <li>任务很大，一个 AI 的上下文装不下</li>
+        </ul>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："这个任务太大了，拆成几个子任务，用多个 Agent 并行处理。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="patterns-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 并行预取为什么能加速启动？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>它让代码运行得更快</span>
+            <span class="quiz-feedback">不对。代码执行速度没变，只是调度方式变了。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>它跳过了不需要的操作</span>
+            <span class="quiz-feedback">不对。所有操作都会执行，只是顺序不同。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>它让 I/O 操作和模块加载并行执行，节省等待时间</span>
+            <span class="quiz-feedback">✅ 正确！就像洗衣服的同时做饭，而不是一个一个来。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 什么时候应该使用懒加载？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>所有模块都应该懒加载</span>
+            <span class="quiz-feedback">不对。核心模块应该立即加载，只有不常用的才懒加载。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>模块体积大且不一定会用到时</span>
+            <span class="quiz-feedback">✅ 对！懒加载最适合大而不常用的模块。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>只有在生产环境才懒加载</span>
+            <span class="quiz-feedback">不对。懒加载在开发和生产环境都有用。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 3:</strong> Agent Swarms 的主要优势是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>让 AI 运行更快</span>
+            <span class="quiz-feedback">速度不是主要优势，能力才是。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>节省 API 费用</span>
+            <span class="quiz-feedback">不对。多个 Agent 可能会花更多钱。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>可以并行处理复杂任务，每个 Agent 专注一个子任务</span>
+            <span class="quiz-feedback">✅ 完全正确！就像团队协作，每人负责一部分。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 7: 总结与实践建议 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>如何运用这些技巧？</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">⚡</div>
+          <h3>并行预取</h3>
+          <p><strong>指导 AI：</strong>"找出所有慢 I/O 操作，让它们尽早启动并并行运行"</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🪄</div>
+          <h3>懒加载</h3>
+          <p><strong>指导 AI：</strong>"识别大模块，用懒加载延迟到真正需要时才导入"</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🎚️</div>
+          <h3>特性开关</h3>
+          <p><strong>指导 AI：</strong>"新功能加特性开关，方便 A/B 测试和应急关闭"</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🐝</div>
+          <h3>Agent Swarms</h3>
+          <p><strong>指导 AI：</strong>"这个任务太大，拆成子任务让多个 Agent 并行处理"</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 关键洞察</strong>
+        <p>这些技巧不只是"代码优化"——它们是<strong>思维模式</strong>。当你理解了这些模式，你就能更好地<strong>描述你想要什么</strong>，AI 也就能写出更好的代码。</p>
+        <p>作为 "vibe coder"，你的优势不是记住语法，而是<strong>识别模式、提出需求、评估方案</strong>。</p>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你掌握了这些聪明技巧。最后一个模块，让我们从<strong>全局视角</strong>看整个系统。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 6: 全局架构</strong> →</p>
+    </div>
+  </div>
+
+</section>
+<section class="module" id="module-6" data-module-number="6">
+
+  <!-- Screen 1: 俯瞰全局架构 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>全局架构：把所有东西串起来</h1>
+      <p class="lead">你已经学习了工具、命令、服务、API 集成和性能模式。现在让我们从 10000 米的高空俯瞰整个系统。</p>
+      <p>这就像看完一部电影的所有幕后花絮后，再完整地看一遍电影——这次你能看懂每一个镜头是怎么拍的。</p>
+    </div>
+
+    <div class="architecture-diagram">
+      <div class="arch-layer arch-layer-1">
+        <h3>用户交互层</h3>
+        <div class="arch-components">
+          <div class="arch-box">
+            <strong>main.tsx</strong>
+            <p>CLI 入口点</p>
+          </div>
+          <div class="arch-box">
+            <strong>Ink/React</strong>
+            <p>终端 UI</p>
+          </div>
+          <div class="arch-box">
+            <strong>Commands</strong>
+            <p>斜杠命令</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer arch-layer-2">
+        <h3>AI 决策层</h3>
+        <div class="arch-components">
+          <div class="arch-box">
+            <strong>QueryEngine</strong>
+            <p>LLM 调用引擎</p>
+          </div>
+          <div class="arch-box">
+            <strong>工具调用循环</strong>
+            <p>思考 → 行动 → 观察</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer arch-layer-3">
+        <h3>工具执行层</h3>
+        <div class="arch-components">
+          <div class="arch-box">BashTool</div>
+          <div class="arch-box">FileReadTool</div>
+          <div class="arch-box">FileWriteTool</div>
+          <div class="arch-box">GrepTool</div>
+          <div class="arch-box">AgentTool</div>
+          <div class="arch-box">SkillTool</div>
+          <div class="arch-box">MCPTool</div>
+          <div class="arch-box">LSPTool</div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer arch-layer-4">
+        <h3>服务 & 系统层</h3>
+        <div class="arch-components">
+          <div class="arch-box">
+            <strong>Anthropic API</strong>
+            <p>Claude 模型</p>
+          </div>
+          <div class="arch-box">
+            <strong>MCP 服务器</strong>
+            <p>外部工具</p>
+          </div>
+          <div class="arch-box">
+            <strong>LSP</strong>
+            <p>代码智能</p>
+          </div>
+          <div class="arch-box">
+            <strong>文件系统</strong>
+            <p>本地代码</p>
+          </div>
+          <div class="arch-box">
+            <strong>Shell</strong>
+            <p>命令执行</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>这个架构是<strong>分层的</strong>——每一层只和相邻的层对话。用户不直接调用工具，工具不直接调用 API。这种设计让每一层都可以独立测试和替换。</p>
+    </div>
+  </div>
+
+  <!-- Screen 2: 端到端场景追踪 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>完整场景：创建一个 Pull Request</h2>
+      <p>让我们追踪一个真实的用户场景，从输入到完成，看看数据如何在系统中流动。</p>
+    </div>
+
+    <div class="flow-animation" id="create-pr-flow" data-steps='[
+      {"from": "用户", "to": "main.tsx", "label": "输入: 创建 PR", "icon": "💬"},
+      {"from": "main.tsx", "to": "QueryEngine", "label": "启动对话", "icon": "🚀"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "发送上下文", "icon": "🌐"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "决策: 检查 git status", "icon": "🤔"},
+      {"from": "QueryEngine", "to": "BashTool", "label": "执行: git status", "icon": "🔧"},
+      {"from": "BashTool", "to": "Shell", "label": "运行命令", "icon": "⚡"},
+      {"from": "Shell", "to": "BashTool", "label": "返回: 有未提交更改", "icon": "📊"},
+      {"from": "BashTool", "to": "QueryEngine", "label": "工具结果", "icon": "✅"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "发送结果", "icon": "📤"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "决策: 提交更改", "icon": "🤔"},
+      {"from": "QueryEngine", "to": "BashTool", "label": "执行: git add + commit", "icon": "🔧"},
+      {"from": "BashTool", "to": "QueryEngine", "label": "提交成功", "icon": "✅"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "继续", "icon": "📤"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "决策: 创建 PR", "icon": "🤔"},
+      {"from": "QueryEngine", "to": "BashTool", "label": "执行: gh pr create", "icon": "🔧"},
+      {"from": "BashTool", "to": "GitHub API", "label": "创建 PR", "icon": "🌐"},
+      {"from": "GitHub API", "to": "BashTool", "label": "PR #123 已创建", "icon": "🎉"},
+      {"from": "BashTool", "to": "QueryEngine", "label": "返回 PR URL", "icon": "📦"},
+      {"from": "QueryEngine", "to": "用户", "label": "显示: PR 已创建 ✅", "icon": "✨"}
+    ]'></div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🔄 观察工具调用循环</strong>
+        <p>注意到 QueryEngine 和 Claude API 之间的往返了吗？每次工具执行后，结果都会返回给 API，让它决定下一步。这就是 <span class="glossary-term" data-tooltip="Agent 循环是 AI 系统的核心模式：思考(API 决策) → 行动(执行工具) → 观察(获取结果) → 重复。">Agent 循环</span>。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 为什么这样设计？ -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>设计决策背后的原因</h2>
+      <p>每个架构选择都是为了解决特定问题。让我们看看为什么 Claude Code 这样构建：</p>
+    </div>
+
+    <div class="design-decision-cards">
+      <div class="decision-card">
+        <h3>🎯 为什么用 Bun 不用 Node.js？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>启动速度。开发者打开终端，输入 <code>claude</code>，期待立即响应。</p>
+          <p><strong>解决：</strong>Bun 启动比 Node.js 快 3-4 倍，TypeScript 原生支持，无需编译步骤。</p>
+          <p><strong>代价：</strong>生态系统较小，某些 npm 包可能不兼容。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>⚛️ 为什么在终端用 React？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>终端 UI 很难写。手动管理光标位置、颜色、状态更新容易出错。</p>
+          <p><strong>解决：</strong>Ink 让你用 React 组件写终端 UI——声明式、可复用、好测试。</p>
+          <p><strong>好处：</strong>团队已经懂 React，复杂 UI（进度条、表单、动画）变简单。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🔧 为什么有 40+ 工具？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>编程任务千变万化。读文件、写代码、搜索、运行命令、调试——每个都需要不同能力。</p>
+          <p><strong>解决：</strong>每个工具做一件事，做好。组合使用实现复杂任务。</p>
+          <p><strong>类比：</strong>就像工具箱——有锤子、螺丝刀、扳手，而不是一个"万能工具"。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🛡️ 为什么需要权限系统？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>AI 可能会犯错。如果它运行 <code>rm -rf /</code> 怎么办？</p>
+          <p><strong>解决：</strong>每个工具调用都要经过权限检查。破坏性操作必须用户同意。</p>
+          <p><strong>平衡：</strong>自动化 vs 安全。允许模式让流畅操作，询问模式保护关键文件。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🚀 为什么并行预取？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>启动时需要读取配置、钥匙串、检查更新——这些操作很慢。</p>
+          <p><strong>解决：</strong>在 <code>main.tsx</code> 加载其他模块的同时，后台启动慢操作。</p>
+          <p><strong>结果：</strong>启动时间从 200ms 降到 135ms——用户感知不到延迟。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🌐 为什么支持 MCP？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>不可能内置所有功能。用户想连接 Jira、Notion、自定义数据库。</p>
+          <p><strong>解决：</strong>MCP 是一个协议，让外部服务暴露工具给 AI。</p>
+          <p><strong>可扩展性：</strong>社区可以构建 MCP 服务器，无需修改 Claude Code 核心。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: 你学到的知识如何帮助你 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>这些知识如何帮助你指导 AI 编程？</h2>
+      <p>学习 Claude Code 的架构不只是了解这个工具——它教会你<strong>如何思考软件系统</strong>。这些知识直接帮助你：</p>
+    </div>
+
+    <div class="benefit-cards">
+      <div class="benefit-card">
+        <div class="benefit-icon">🎯</div>
+        <h3>做出更好的架构决策</h3>
+        <p>当 AI 问"应该把这个逻辑放在前端还是后端？"，你现在知道：</p>
+        <ul>
+          <li>分层架构的好处（可测试、可替换）</li>
+          <li>关注点分离（UI vs 业务逻辑 vs 数据层）</li>
+          <li>什么时候用工具模式（小功能组合成大功能）</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">🐛</div>
+        <h3>更快找到 bug</h3>
+        <p>当功能不工作时，你知道从哪里查：</p>
+        <ul>
+          <li>数据流问题？查工具调用和 API 往返</li>
+          <li>权限错误？查权限配置</li>
+          <li>性能慢？查是否有不必要的串行操作</li>
+        </ul>
+        <p>你能精确告诉 AI："检查 X 组件和 Y 服务之间的数据传递"</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">⚡</div>
+        <h3>要求性能优化</h3>
+        <p>你学到的模式可以直接应用：</p>
+        <ul>
+          <li>"让这两个 API 调用并行执行"</li>
+          <li>"添加懒加载，只在需要时导入这个库"</li>
+          <li>"用特性开关包裹这个实验性功能"</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">🔒</div>
+        <h3>考虑安全性</h3>
+        <p>权限系统教会你：</p>
+        <ul>
+          <li>哪些操作是破坏性的（删除、覆盖、执行）</li>
+          <li>如何设计安全检查（白名单 vs 黑名单）</li>
+          <li>何时需要用户确认</li>
+        </ul>
+        <p>你会告诉 AI："添加确认对话框，因为这会删除数据"</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">📚</div>
+        <h3>使用正确的术语</h3>
+        <p>你现在可以说：</p>
+        <ul>
+          <li>"这个函数应该返回一个 <code>Promise</code>"</li>
+          <li>"用 <code>async/await</code> 处理异步操作"</li>
+          <li>"添加一个 <code>schema</code> 验证输入"</li>
+          <li>"用 <code>feature flag</code> 控制这个功能的开关"</li>
+        </ul>
+        <p>精确的术语让 AI 准确理解你的需求。</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">🔄</div>
+        <h3>理解 AI 的工作方式</h3>
+        <p>Agent 循环教会你 AI 如何思考：</p>
+        <ul>
+          <li>它不是一次性生成所有代码</li>
+          <li>它会先探索、再计划、然后执行</li>
+          <li>它需要反馈循环（工具结果）来调整策略</li>
+        </ul>
+        <p>理解这一点后，你会给 AI 更好的指令："先读取相关文件，然后告诉我你的计划"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: 最终测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>最后的挑战</h2>
+      <p>让我们测试一下你是否真正理解了整个系统：</p>
+    </div>
+
+    <div class="quiz" data-quiz-id="final-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 用户输入 "添加登录功能" 后，系统的第一个动作应该是？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>直接生成登录代码</span>
+            <span class="quiz-feedback">太快了！AI 需要先了解现有架构。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>询问用户要什么样的登录</span>
+            <span class="quiz-feedback">可能需要，但不是第一步。先探索代码库。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>使用 FileReadTool 读取相关文件</span>
+            <span class="quiz-feedback">✅ 正确！Agent 循环从观察开始——先理解现状。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>运行测试</span>
+            <span class="quiz-feedback">测试是在写代码之后，不是之前。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 如果你想让 AI 添加一个"只在开发环境启用"的调试功能，你应该告诉它？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>添加一个配置文件</span>
+            <span class="quiz-feedback">可以工作，但不是最优雅的方式。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>用 feature flag 包裹这个功能</span>
+            <span class="quiz-feedback">✅ 完美！你学到了 Claude Code 的模式并应用它。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>用 if (env === 'dev') 判断</span>
+            <span class="quiz-feedback">能用，但 feature flag 更强大——支持运行时切换和渐进发布。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>注释掉代码</span>
+            <span class="quiz-feedback">这不是动态控制，而且容易忘记取消注释。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="3">
+        <p><strong>问题 3:</strong> 你的应用启动慢，需要读取配置、连接数据库、检查权限。受 Claude Code 启动优化的启发，你应该？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>按顺序执行，确保不出错</span>
+            <span class="quiz-feedback">太慢了！这些操作可以并行。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>懒加载所有内容</span>
+            <span class="quiz-feedback">懒加载适合不常用的功能，但这些是启动必需的。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>缓存所有结果</span>
+            <span class="quiz-feedback">缓存有帮助，但每次首次启动还是慢。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>并行执行这三个操作</span>
+            <span class="quiz-feedback">✅ 对！就像 main.tsx 的并行预取——让 I/O 操作同时进行。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 4:</strong> AI 建议把用户密码存储在代码文件里。基于权限系统的设计理念，你应该？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="0">
+            <span>接受，因为 AI 总是对的</span>
+            <span class="quiz-feedback">永远不要！AI 会犯错，尤其是安全问题。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="1">
+            <span>拒绝，要求用环境变量或密钥管理系统</span>
+            <span class="quiz-feedback">✅ 完美！你理解了安全边界——敏感数据不应该出现在代码中。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="2">
+            <span>加密后再存储</span>
+            <span class="quiz-feedback">稍好，但密钥还是在代码里。用专门的密钥管理工具。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="3">
+            <span>存在 .gitignore 的文件里</span>
+            <span class="quiz-feedback">这防止提交到 git，但文件还是在磁盘上——不够安全。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 5:</strong> 你想扩展应用功能，让它能访问 Notion 数据库。受 MCP 设计的启发，最好的方式是？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="0">
+            <span>直接修改核心代码添加 Notion API</span>
+            <span class="quiz-feedback">耦合太紧！每次添加新服务都要改核心代码。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="1">
+            <span>fork 项目添加功能</span>
+            <span class="quiz-feedback">维护成本高，无法跟上上游更新。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="2">
+            <span>创建一个插件/扩展系统</span>
+            <span class="quiz-feedback">✅ 正确！就像 MCP——定义协议，让外部服务可插拔。核心保持简洁。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="3">
+            <span>用 webhook 连接</span>
+            <span class="quiz-feedback">Webhook 适合事件通知，不适合双向数据访问。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 课程总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>你的学习之旅完成了 🎉</h1>
+      <p class="lead">从"这是个聊天机器人"到"这是一个精心设计的 AI Agent 系统"，你已经走了很远。</p>
+    </div>
+
+    <div class="journey-summary">
+      <div class="journey-module">
+        <div class="journey-number">1</div>
+        <h3>认识 Claude Code</h3>
+        <p>一个终端里的 AI 编程助手</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">2</div>
+        <h3>演员阵容</h3>
+        <p>工具、命令、服务的分工</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">3</div>
+        <h3>工具机制</h3>
+        <p>生命周期和权限系统</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">4</div>
+        <h3>外部集成</h3>
+        <p>API、MCP、LSP</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">5</div>
+        <h3>高级模式</h3>
+        <p>性能优化和可扩展性</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">6</div>
+        <h3>全局视角</h3>
+        <p>整个系统如何协作</p>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <h2>现在你可以</h2>
+      <div class="final-skills">
+        <div class="skill-item">✅ 用正确的术语描述架构需求</div>
+        <div class="skill-item">✅ 快速定位 bug 可能在哪一层</div>
+        <div class="skill-item">✅ 要求 AI 应用性能优化模式</div>
+        <div class="skill-item">✅ 评估 AI 建议的安全性</div>
+        <div class="skill-item">✅ 设计可扩展的插件系统</div>
+        <div class="skill-item">✅ 理解 AI Agent 如何"思考"</div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-success">
+        <strong>🚀 下一步？</strong>
+        <p>拿这些知识去实战：</p>
+        <ul>
+          <li>用 Claude Code 构建一个项目，观察它如何工作</li>
+          <li>阅读其他 AI 工具的架构，比较设计选择</li>
+          <li>在自己的项目里应用这些模式（分层、工具化、权限检查）</li>
+          <li>给 AI 更精确的指令，看看它是否表现更好</li>
+        </ul>
+        <p><strong>记住：</strong>编程不是写代码，是<strong>设计系统</strong>。你现在懂得如何思考系统了。</p>
+      </div>
+    </div>
+
+    <div class="course-footer">
+      <p>课程制作：基于 Claude Code 公开源代码分析</p>
+      <p>技术栈：HTML + CSS + Vanilla JS (无框架依赖)</p>
+      <p>设计理念：显示优于讲述 · 实战优于理论 · 应用优于记忆</p>
+    </div>
+  </div>
+
+</section>  </main>
+
+</body>
+</html>

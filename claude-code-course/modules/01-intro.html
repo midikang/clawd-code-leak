@@ -1,0 +1,299 @@
+<section class="module" id="module-1" data-module-number="1">
+
+  <!-- Screen 1: 欢迎和产品介绍 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>Claude Code 是什么？</h1>
+      <p class="lead">想象你在终端里打字："帮我添加一个登录功能"，然后 AI 就开始写代码、运行测试、修复 bug——直到功能完成。</p>
+      <p>这就是 Claude Code：一个让 AI 成为你编程助手的命令行工具。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="terminal-demo">
+        <div class="terminal-header">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+          <span class="terminal-title">claude-code</span>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-line">
+            <span class="terminal-prompt">$</span>
+            <span class="terminal-command">claude</span>
+          </div>
+          <div class="terminal-line user">你: 帮我添加一个用户登录功能</div>
+          <div class="terminal-line assistant">Claude: 好的，让我先看看现有的用户系统...</div>
+          <div class="terminal-line tool">→ 正在读取 src/auth/user.ts</div>
+          <div class="terminal-line tool">→ 正在创建 src/auth/login.ts</div>
+          <div class="terminal-line tool">→ 正在运行测试...</div>
+          <div class="terminal-line success">✓ 所有测试通过！登录功能已完成。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>但它<strong>不只是写代码</strong>。它可以读取文件、执行命令、搜索代码、运行测试、创建 PR——所有你在开发中需要做的事情。</p>
+    </div>
+  </div>
+
+  <!-- Screen 2: 一次真实的对话流程 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>当你输入一句话，幕后发生了什么？</h2>
+      <p>让我们追踪一次真实的用户交互：你说 "修复这个 bug"，系统是如何响应的？</p>
+    </div>
+
+    <div class="flow-animation" id="user-input-flow" data-steps='[
+      {"from": "用户", "to": "main.tsx", "label": "输入: 修复登录 bug", "icon": "💬"},
+      {"from": "main.tsx", "to": "QueryEngine", "label": "发送到 AI", "icon": "🚀"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "调用 Anthropic API", "icon": "🌐"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "返回：需要读取 auth.ts", "icon": "🔧"},
+      {"from": "QueryEngine", "to": "FileReadTool", "label": "执行工具调用", "icon": "📄"},
+      {"from": "FileReadTool", "to": "QueryEngine", "label": "文件内容", "icon": "📦"},
+      {"from": "QueryEngine", "to": "用户", "label": "显示分析结果", "icon": "✅"}
+    ]'></div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p>Claude Code 不是一个简单的聊天机器人。它是一个<span class="glossary-term" data-tooltip="一个可以使用工具、执行任务的自主程序。Agent 可以决定调用哪些工具、按什么顺序执行操作。">AI Agent</span>——能够<strong>自己决定</strong>需要做什么、调用哪些工具、如何完成任务。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 技术栈一览 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>它是用什么构建的？</h2>
+      <p>Claude Code 使用现代 JavaScript 生态系统，但选择了一些独特的技术：</p>
+    </div>
+
+    <div class="tech-stack-grid">
+      <div class="tech-card">
+        <div class="tech-icon">⚡</div>
+        <h3>Bun</h3>
+        <p>超快的 JavaScript <span class="glossary-term" data-tooltip="运行时 (runtime) 是执行代码的环境。Node.js 和 Bun 都是 JavaScript 运行时，就像 Chrome 浏览器也是一个 JavaScript 运行时。">运行时</span>，比 Node.js 快 3-4 倍</p>
+        <span class="tech-badge">替代 Node.js</span>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">⚛️</div>
+        <h3>React + Ink</h3>
+        <p>用 React 组件构建<span class="glossary-term" data-tooltip="终端 UI (Terminal User Interface) 是在命令行中显示的交互式界面，就像你在终端里看到的菜单、进度条等。">终端 UI</span>，不是网页</p>
+        <span class="tech-badge">终端中的 React</span>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">📘</div>
+        <h3>TypeScript</h3>
+        <p>类型安全的 JavaScript，1900+ 文件</p>
+        <span class="tech-badge">512K+ 行代码</span>
+      </div>
+
+      <div class="tech-card">
+        <div class="tech-icon">🔍</div>
+        <h3>ripgrep</h3>
+        <p>极速代码搜索工具</p>
+        <span class="tech-badge">Rust 驱动</span>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>这个技术栈的选择都是为了<strong>性能</strong>——启动要快、搜索要快、响应要快。开发者不想等待。</p>
+    </div>
+  </div>
+
+  <!-- Screen 4: 代码示例 - 入口点 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>让我们看看真实的代码</h2>
+      <p>当你运行 <code>claude</code> 命令时，第一个被执行的文件是 <code>main.tsx</code>。让我们看看它在做什么：</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/main.tsx (第 1-20 行)</span>
+        </div>
+        <pre><code class="language-typescript">// 这些副作用必须在所有其他导入之前运行:
+// 1. profileCheckpoint 在模块加载前标记入口点
+// 2. startMdmRawRead 启动 MDM 子进程
+// 3. startKeychainPrefetch 预取钥匙串读取
+import { profileCheckpoint } from './utils/startupProfiler.js';
+
+profileCheckpoint('main_tsx_entry');
+import { startMdmRawRead } from './utils/settings/mdm/rawRead.js';
+
+startMdmRawRead();
+import {
+  ensureKeychainPrefetchCompleted,
+  startKeychainPrefetch
+} from './utils/secureStorage/keychainPrefetch.js';
+
+startKeychainPrefetch();
+import { feature } from 'bun:bundle';
+import { Command as CommanderCommand } from '@commander-js/extra-typings';
+import React from 'react';</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-3</span>
+          <p>注释解释了为什么这些代码必须最先运行——它们是性能优化。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">6-7</span>
+          <p>记录一个时间戳，用来测量启动性能。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">8-10</span>
+          <p>立即启动读取 MDM 设置（企业管理设置），这样它可以在后台运行。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">11-16</span>
+          <p>立即启动从<span class="glossary-term" data-tooltip="钥匙串 (Keychain) 是 macOS 系统用来存储密码、密钥等敏感信息的安全存储区域。">钥匙串</span>读取密码，也在后台运行。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">17-19</span>
+          <p>导入其他需要的模块：特性开关、命令行解析器、React。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 为什么要这样做？</strong>
+        <p>注意到代码在导入其他东西之前，就启动了两个耗时操作？这叫<strong>并行预取</strong>——在主程序加载的同时，让慢操作在后台运行。结果：启动时间减少 60+ 毫秒。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: 小测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试一下你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="intro-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 为什么 Claude Code 选择 Bun 而不是 Node.js？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>Bun 更流行</span>
+            <span class="quiz-feedback">不对。Bun 实际上比 Node.js 新得多，使用的人也少很多。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>Bun 是 TypeScript 原生支持的</span>
+            <span class="quiz-feedback">这是一个优点，但不是主要原因。Node.js 也可以运行 TypeScript。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>Bun 启动和执行速度更快</span>
+            <span class="quiz-feedback">✅ 正确！性能是关键。开发者工具需要即时响应，每一毫秒都很重要。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>Bun 有更多的包</span>
+            <span class="quiz-feedback">不对。Node.js 的 npm 生态系统要大得多。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 用户说 "添加登录功能" 后，Claude Code 的第一步是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>直接生成登录代码</span>
+            <span class="quiz-feedback">太快了！AI 需要先了解现有代码结构。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>读取相关文件了解现有架构</span>
+            <span class="quiz-feedback">✅ 对！就像一个真正的开发者，它先要理解代码库，再动手写代码。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>询问用户要什么样的登录</span>
+            <span class="quiz-feedback">不完全对。它通常会先探索代码，然后基于发现来决定是否需要更多信息。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>运行现有测试</span>
+            <span class="quiz-feedback">测试是后面的步骤，先要理解和编写代码。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 3:</strong> main.tsx 为什么要在导入其他模块之前就启动 MDM 读取？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>MDM 是最重要的功能</span>
+            <span class="quiz-feedback">不是重要性的问题，是时机的问题。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>防止其他模块覆盖 MDM 设置</span>
+            <span class="quiz-feedback">这不是加载顺序的原因。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>让慢操作在后台并行运行，节省时间</span>
+            <span class="quiz-feedback">✅ 完全正确！这是性能优化——在主程序加载时，让 I/O 操作并行执行。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>避免循环依赖</span>
+            <span class="quiz-feedback">不是。这是关于性能，不是依赖管理。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 总结与过渡 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你已经了解了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🎯</div>
+          <h3>产品定位</h3>
+          <p>Claude Code 是一个 AI Agent，可以自主决定如何完成编程任务</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">⚡</div>
+          <h3>技术选型</h3>
+          <p>使用 Bun + TypeScript + React/Ink，优先考虑性能</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔄</div>
+          <h3>执行流程</h3>
+          <p>用户输入 → QueryEngine → API → 工具调用 → 返回结果</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🚀</div>
+          <h3>性能优化</h3>
+          <p>并行预取、懒加载、特性开关——每一毫秒都重要</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你知道 Claude Code <strong>是什么</strong>了。接下来，让我们认识一下它的"演员阵容"——工具、命令和服务。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 2: 认识演员阵容</strong> →</p>
+    </div>
+  </div>
+
+</section>
