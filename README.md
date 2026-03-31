@@ -6,12 +6,12 @@
 
 ## Research Context
 
-This repository is maintained by a **university student** studying:
+This repository is maintained by **Arnesh Banerjee**, a BTech Data Science student, studying:
 
 - software supply-chain exposure and build artifact leaks
-- secure software engineering practices
-- agentic developer tooling architecture
-- defensive analysis of real-world CLI systems
+- agentic developer tooling architecture and multi-agent systems
+- AI safety, alignment, and governance
+- defensive analysis of real-world LLM-based CLI systems
 
 This archive is intended to support:
 
@@ -41,6 +41,12 @@ The README/essay archival work on this branch was AI-assisted and orchestrated w
 - **Codex-driven workflow:** this documentation/contextualization pass was completed with Codex under OmX orchestration.
 
 It does **not** claim ownership of the original code, and it should not be interpreted as an official Anthropic repository.
+
+---
+
+## Credit / Upstream Source
+
+This is a personal reference clone of [instructkr/claude-code](https://github.com/instructkr/claude-code), which is the original archive of the public snapshot. Full credit for the initial archival and documentation work goes to that repository.
 
 ---
 
@@ -294,7 +300,7 @@ Built-in and third-party plugins are loaded through the `plugins/` subsystem.
 
 ## Research / Ownership Disclaimer
 
-- This repository is an **educational and defensive security research archive** maintained by a university student.
+- This repository is an **educational and defensive security research archive** maintained by Arnesh Banerjee, a BTech Data Science student at Heritage Institute of Technology, Kolkata (GitHub: [ArneshBanerjee](https://github.com/ArneshBanerjee)).
 - It exists to study source exposure, packaging failures, and the architecture of modern agentic CLI systems.
 - The original Claude Code source remains the property of **Anthropic**.
 - This repository is **not affiliated with, endorsed by, or maintained by Anthropic**.
