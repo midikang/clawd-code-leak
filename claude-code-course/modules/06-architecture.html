@@ -1,0 +1,506 @@
+<section class="module" id="module-6" data-module-number="6">
+
+  <!-- Screen 1: 俯瞰全局架构 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>全局架构：把所有东西串起来</h1>
+      <p class="lead">你已经学习了工具、命令、服务、API 集成和性能模式。现在让我们从 10000 米的高空俯瞰整个系统。</p>
+      <p>这就像看完一部电影的所有幕后花絮后，再完整地看一遍电影——这次你能看懂每一个镜头是怎么拍的。</p>
+    </div>
+
+    <div class="architecture-diagram">
+      <div class="arch-layer arch-layer-1">
+        <h3>用户交互层</h3>
+        <div class="arch-components">
+          <div class="arch-box">
+            <strong>main.tsx</strong>
+            <p>CLI 入口点</p>
+          </div>
+          <div class="arch-box">
+            <strong>Ink/React</strong>
+            <p>终端 UI</p>
+          </div>
+          <div class="arch-box">
+            <strong>Commands</strong>
+            <p>斜杠命令</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer arch-layer-2">
+        <h3>AI 决策层</h3>
+        <div class="arch-components">
+          <div class="arch-box">
+            <strong>QueryEngine</strong>
+            <p>LLM 调用引擎</p>
+          </div>
+          <div class="arch-box">
+            <strong>工具调用循环</strong>
+            <p>思考 → 行动 → 观察</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer arch-layer-3">
+        <h3>工具执行层</h3>
+        <div class="arch-components">
+          <div class="arch-box">BashTool</div>
+          <div class="arch-box">FileReadTool</div>
+          <div class="arch-box">FileWriteTool</div>
+          <div class="arch-box">GrepTool</div>
+          <div class="arch-box">AgentTool</div>
+          <div class="arch-box">SkillTool</div>
+          <div class="arch-box">MCPTool</div>
+          <div class="arch-box">LSPTool</div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">↓</div>
+
+      <div class="arch-layer arch-layer-4">
+        <h3>服务 & 系统层</h3>
+        <div class="arch-components">
+          <div class="arch-box">
+            <strong>Anthropic API</strong>
+            <p>Claude 模型</p>
+          </div>
+          <div class="arch-box">
+            <strong>MCP 服务器</strong>
+            <p>外部工具</p>
+          </div>
+          <div class="arch-box">
+            <strong>LSP</strong>
+            <p>代码智能</p>
+          </div>
+          <div class="arch-box">
+            <strong>文件系统</strong>
+            <p>本地代码</p>
+          </div>
+          <div class="arch-box">
+            <strong>Shell</strong>
+            <p>命令执行</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>这个架构是<strong>分层的</strong>——每一层只和相邻的层对话。用户不直接调用工具，工具不直接调用 API。这种设计让每一层都可以独立测试和替换。</p>
+    </div>
+  </div>
+
+  <!-- Screen 2: 端到端场景追踪 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>完整场景：创建一个 Pull Request</h2>
+      <p>让我们追踪一个真实的用户场景，从输入到完成，看看数据如何在系统中流动。</p>
+    </div>
+
+    <div class="flow-animation" id="create-pr-flow" data-steps='[
+      {"from": "用户", "to": "main.tsx", "label": "输入: 创建 PR", "icon": "💬"},
+      {"from": "main.tsx", "to": "QueryEngine", "label": "启动对话", "icon": "🚀"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "发送上下文", "icon": "🌐"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "决策: 检查 git status", "icon": "🤔"},
+      {"from": "QueryEngine", "to": "BashTool", "label": "执行: git status", "icon": "🔧"},
+      {"from": "BashTool", "to": "Shell", "label": "运行命令", "icon": "⚡"},
+      {"from": "Shell", "to": "BashTool", "label": "返回: 有未提交更改", "icon": "📊"},
+      {"from": "BashTool", "to": "QueryEngine", "label": "工具结果", "icon": "✅"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "发送结果", "icon": "📤"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "决策: 提交更改", "icon": "🤔"},
+      {"from": "QueryEngine", "to": "BashTool", "label": "执行: git add + commit", "icon": "🔧"},
+      {"from": "BashTool", "to": "QueryEngine", "label": "提交成功", "icon": "✅"},
+      {"from": "QueryEngine", "to": "Claude API", "label": "继续", "icon": "📤"},
+      {"from": "Claude API", "to": "QueryEngine", "label": "决策: 创建 PR", "icon": "🤔"},
+      {"from": "QueryEngine", "to": "BashTool", "label": "执行: gh pr create", "icon": "🔧"},
+      {"from": "BashTool", "to": "GitHub API", "label": "创建 PR", "icon": "🌐"},
+      {"from": "GitHub API", "to": "BashTool", "label": "PR #123 已创建", "icon": "🎉"},
+      {"from": "BashTool", "to": "QueryEngine", "label": "返回 PR URL", "icon": "📦"},
+      {"from": "QueryEngine", "to": "用户", "label": "显示: PR 已创建 ✅", "icon": "✨"}
+    ]'></div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🔄 观察工具调用循环</strong>
+        <p>注意到 QueryEngine 和 Claude API 之间的往返了吗？每次工具执行后，结果都会返回给 API，让它决定下一步。这就是 <span class="glossary-term" data-tooltip="Agent 循环是 AI 系统的核心模式：思考(API 决策) → 行动(执行工具) → 观察(获取结果) → 重复。">Agent 循环</span>。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 为什么这样设计？ -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>设计决策背后的原因</h2>
+      <p>每个架构选择都是为了解决特定问题。让我们看看为什么 Claude Code 这样构建：</p>
+    </div>
+
+    <div class="design-decision-cards">
+      <div class="decision-card">
+        <h3>🎯 为什么用 Bun 不用 Node.js？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>启动速度。开发者打开终端，输入 <code>claude</code>，期待立即响应。</p>
+          <p><strong>解决：</strong>Bun 启动比 Node.js 快 3-4 倍，TypeScript 原生支持，无需编译步骤。</p>
+          <p><strong>代价：</strong>生态系统较小，某些 npm 包可能不兼容。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>⚛️ 为什么在终端用 React？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>终端 UI 很难写。手动管理光标位置、颜色、状态更新容易出错。</p>
+          <p><strong>解决：</strong>Ink 让你用 React 组件写终端 UI——声明式、可复用、好测试。</p>
+          <p><strong>好处：</strong>团队已经懂 React，复杂 UI（进度条、表单、动画）变简单。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🔧 为什么有 40+ 工具？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>编程任务千变万化。读文件、写代码、搜索、运行命令、调试——每个都需要不同能力。</p>
+          <p><strong>解决：</strong>每个工具做一件事，做好。组合使用实现复杂任务。</p>
+          <p><strong>类比：</strong>就像工具箱——有锤子、螺丝刀、扳手，而不是一个"万能工具"。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🛡️ 为什么需要权限系统？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>AI 可能会犯错。如果它运行 <code>rm -rf /</code> 怎么办？</p>
+          <p><strong>解决：</strong>每个工具调用都要经过权限检查。破坏性操作必须用户同意。</p>
+          <p><strong>平衡：</strong>自动化 vs 安全。允许模式让流畅操作，询问模式保护关键文件。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🚀 为什么并行预取？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>启动时需要读取配置、钥匙串、检查更新——这些操作很慢。</p>
+          <p><strong>解决：</strong>在 <code>main.tsx</code> 加载其他模块的同时，后台启动慢操作。</p>
+          <p><strong>结果：</strong>启动时间从 200ms 降到 135ms——用户感知不到延迟。</p>
+        </div>
+      </div>
+
+      <div class="decision-card">
+        <h3>🌐 为什么支持 MCP？</h3>
+        <div class="decision-content">
+          <p><strong>问题：</strong>不可能内置所有功能。用户想连接 Jira、Notion、自定义数据库。</p>
+          <p><strong>解决：</strong>MCP 是一个协议，让外部服务暴露工具给 AI。</p>
+          <p><strong>可扩展性：</strong>社区可以构建 MCP 服务器，无需修改 Claude Code 核心。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: 你学到的知识如何帮助你 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>这些知识如何帮助你指导 AI 编程？</h2>
+      <p>学习 Claude Code 的架构不只是了解这个工具——它教会你<strong>如何思考软件系统</strong>。这些知识直接帮助你：</p>
+    </div>
+
+    <div class="benefit-cards">
+      <div class="benefit-card">
+        <div class="benefit-icon">🎯</div>
+        <h3>做出更好的架构决策</h3>
+        <p>当 AI 问"应该把这个逻辑放在前端还是后端？"，你现在知道：</p>
+        <ul>
+          <li>分层架构的好处（可测试、可替换）</li>
+          <li>关注点分离（UI vs 业务逻辑 vs 数据层）</li>
+          <li>什么时候用工具模式（小功能组合成大功能）</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">🐛</div>
+        <h3>更快找到 bug</h3>
+        <p>当功能不工作时，你知道从哪里查：</p>
+        <ul>
+          <li>数据流问题？查工具调用和 API 往返</li>
+          <li>权限错误？查权限配置</li>
+          <li>性能慢？查是否有不必要的串行操作</li>
+        </ul>
+        <p>你能精确告诉 AI："检查 X 组件和 Y 服务之间的数据传递"</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">⚡</div>
+        <h3>要求性能优化</h3>
+        <p>你学到的模式可以直接应用：</p>
+        <ul>
+          <li>"让这两个 API 调用并行执行"</li>
+          <li>"添加懒加载，只在需要时导入这个库"</li>
+          <li>"用特性开关包裹这个实验性功能"</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">🔒</div>
+        <h3>考虑安全性</h3>
+        <p>权限系统教会你：</p>
+        <ul>
+          <li>哪些操作是破坏性的（删除、覆盖、执行）</li>
+          <li>如何设计安全检查（白名单 vs 黑名单）</li>
+          <li>何时需要用户确认</li>
+        </ul>
+        <p>你会告诉 AI："添加确认对话框，因为这会删除数据"</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">📚</div>
+        <h3>使用正确的术语</h3>
+        <p>你现在可以说：</p>
+        <ul>
+          <li>"这个函数应该返回一个 <code>Promise</code>"</li>
+          <li>"用 <code>async/await</code> 处理异步操作"</li>
+          <li>"添加一个 <code>schema</code> 验证输入"</li>
+          <li>"用 <code>feature flag</code> 控制这个功能的开关"</li>
+        </ul>
+        <p>精确的术语让 AI 准确理解你的需求。</p>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">🔄</div>
+        <h3>理解 AI 的工作方式</h3>
+        <p>Agent 循环教会你 AI 如何思考：</p>
+        <ul>
+          <li>它不是一次性生成所有代码</li>
+          <li>它会先探索、再计划、然后执行</li>
+          <li>它需要反馈循环（工具结果）来调整策略</li>
+        </ul>
+        <p>理解这一点后，你会给 AI 更好的指令："先读取相关文件，然后告诉我你的计划"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: 最终测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>最后的挑战</h2>
+      <p>让我们测试一下你是否真正理解了整个系统：</p>
+    </div>
+
+    <div class="quiz" data-quiz-id="final-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 用户输入 "添加登录功能" 后，系统的第一个动作应该是？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>直接生成登录代码</span>
+            <span class="quiz-feedback">太快了！AI 需要先了解现有架构。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>询问用户要什么样的登录</span>
+            <span class="quiz-feedback">可能需要，但不是第一步。先探索代码库。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>使用 FileReadTool 读取相关文件</span>
+            <span class="quiz-feedback">✅ 正确！Agent 循环从观察开始——先理解现状。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>运行测试</span>
+            <span class="quiz-feedback">测试是在写代码之后，不是之前。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 如果你想让 AI 添加一个"只在开发环境启用"的调试功能，你应该告诉它？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>添加一个配置文件</span>
+            <span class="quiz-feedback">可以工作，但不是最优雅的方式。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>用 feature flag 包裹这个功能</span>
+            <span class="quiz-feedback">✅ 完美！你学到了 Claude Code 的模式并应用它。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>用 if (env === 'dev') 判断</span>
+            <span class="quiz-feedback">能用，但 feature flag 更强大——支持运行时切换和渐进发布。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>注释掉代码</span>
+            <span class="quiz-feedback">这不是动态控制，而且容易忘记取消注释。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="3">
+        <p><strong>问题 3:</strong> 你的应用启动慢，需要读取配置、连接数据库、检查权限。受 Claude Code 启动优化的启发，你应该？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>按顺序执行，确保不出错</span>
+            <span class="quiz-feedback">太慢了！这些操作可以并行。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>懒加载所有内容</span>
+            <span class="quiz-feedback">懒加载适合不常用的功能，但这些是启动必需的。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>缓存所有结果</span>
+            <span class="quiz-feedback">缓存有帮助，但每次首次启动还是慢。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>并行执行这三个操作</span>
+            <span class="quiz-feedback">✅ 对！就像 main.tsx 的并行预取——让 I/O 操作同时进行。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 4:</strong> AI 建议把用户密码存储在代码文件里。基于权限系统的设计理念，你应该？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="0">
+            <span>接受，因为 AI 总是对的</span>
+            <span class="quiz-feedback">永远不要！AI 会犯错，尤其是安全问题。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="1">
+            <span>拒绝，要求用环境变量或密钥管理系统</span>
+            <span class="quiz-feedback">✅ 完美！你理解了安全边界——敏感数据不应该出现在代码中。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="2">
+            <span>加密后再存储</span>
+            <span class="quiz-feedback">稍好，但密钥还是在代码里。用专门的密钥管理工具。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="3">
+            <span>存在 .gitignore 的文件里</span>
+            <span class="quiz-feedback">这防止提交到 git，但文件还是在磁盘上——不够安全。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 5:</strong> 你想扩展应用功能，让它能访问 Notion 数据库。受 MCP 设计的启发，最好的方式是？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="0">
+            <span>直接修改核心代码添加 Notion API</span>
+            <span class="quiz-feedback">耦合太紧！每次添加新服务都要改核心代码。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="1">
+            <span>fork 项目添加功能</span>
+            <span class="quiz-feedback">维护成本高，无法跟上上游更新。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="2">
+            <span>创建一个插件/扩展系统</span>
+            <span class="quiz-feedback">✅ 正确！就像 MCP——定义协议，让外部服务可插拔。核心保持简洁。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="3">
+            <span>用 webhook 连接</span>
+            <span class="quiz-feedback">Webhook 适合事件通知，不适合双向数据访问。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 课程总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>你的学习之旅完成了 🎉</h1>
+      <p class="lead">从"这是个聊天机器人"到"这是一个精心设计的 AI Agent 系统"，你已经走了很远。</p>
+    </div>
+
+    <div class="journey-summary">
+      <div class="journey-module">
+        <div class="journey-number">1</div>
+        <h3>认识 Claude Code</h3>
+        <p>一个终端里的 AI 编程助手</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">2</div>
+        <h3>演员阵容</h3>
+        <p>工具、命令、服务的分工</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">3</div>
+        <h3>工具机制</h3>
+        <p>生命周期和权限系统</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">4</div>
+        <h3>外部集成</h3>
+        <p>API、MCP、LSP</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">5</div>
+        <h3>高级模式</h3>
+        <p>性能优化和可扩展性</p>
+      </div>
+
+      <div class="journey-arrow">→</div>
+
+      <div class="journey-module">
+        <div class="journey-number">6</div>
+        <h3>全局视角</h3>
+        <p>整个系统如何协作</p>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <h2>现在你可以</h2>
+      <div class="final-skills">
+        <div class="skill-item">✅ 用正确的术语描述架构需求</div>
+        <div class="skill-item">✅ 快速定位 bug 可能在哪一层</div>
+        <div class="skill-item">✅ 要求 AI 应用性能优化模式</div>
+        <div class="skill-item">✅ 评估 AI 建议的安全性</div>
+        <div class="skill-item">✅ 设计可扩展的插件系统</div>
+        <div class="skill-item">✅ 理解 AI Agent 如何"思考"</div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-success">
+        <strong>🚀 下一步？</strong>
+        <p>拿这些知识去实战：</p>
+        <ul>
+          <li>用 Claude Code 构建一个项目，观察它如何工作</li>
+          <li>阅读其他 AI 工具的架构，比较设计选择</li>
+          <li>在自己的项目里应用这些模式（分层、工具化、权限检查）</li>
+          <li>给 AI 更精确的指令，看看它是否表现更好</li>
+        </ul>
+        <p><strong>记住：</strong>编程不是写代码，是<strong>设计系统</strong>。你现在懂得如何思考系统了。</p>
+      </div>
+    </div>
+
+    <div class="course-footer">
+      <p>课程制作：基于 Claude Code 公开源代码分析</p>
+      <p>技术栈：HTML + CSS + Vanilla JS (无框架依赖)</p>
+      <p>设计理念：显示优于讲述 · 实战优于理论 · 应用优于记忆</p>
+    </div>
+  </div>
+
+</section>

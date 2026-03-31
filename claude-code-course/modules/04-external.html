@@ -1,0 +1,460 @@
+<section class="module" id="module-4" data-module-number="4">
+
+  <!-- Screen 1: 模块介绍 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>与外部世界对话</h1>
+      <p class="lead">Claude Code 不是一个孤岛。它需要与外部系统交互：调用 AI API、连接外部工具、理解代码语义。</p>
+      <p>这一模块，我们将探索 Claude Code 如何与外部世界对话。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="interaction-grid">
+        <div class="interaction-card">
+          <div class="interaction-icon">🌐</div>
+          <h3>Anthropic API</h3>
+          <p>与 Claude AI 模型对话</p>
+        </div>
+        <div class="interaction-card">
+          <div class="interaction-icon">🔌</div>
+          <h3>MCP</h3>
+          <p>连接外部工具服务器</p>
+        </div>
+        <div class="interaction-card">
+          <div class="interaction-icon">💡</div>
+          <h3>LSP</h3>
+          <p>代码智能与自动补全</p>
+        </div>
+        <div class="interaction-card">
+          <div class="interaction-icon">🔐</div>
+          <h3>OAuth</h3>
+          <p>安全认证流程</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: Anthropic API -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>核心对话：Anthropic API</h2>
+      <p>当你向 Claude Code 提问时，它需要调用 Anthropic 的 API 来获取 AI 的响应。这个过程发生在 <code>QueryEngine.ts</code> 中。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/services/api/claude.ts</span>
+        </div>
+        <pre><code class="language-typescript">// 导入 Anthropic SDK
+import type {
+  BetaMessage,
+  BetaMessageStreamParams,
+  BetaRawMessageStreamEvent,
+  MessageParam,
+} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+
+// 调用 API 的核心函数
+export async function callClaudeAPI(
+  messages: MessageParam[],
+  systemPrompt: string,
+  tools: Tool[],
+  model: string
+): Promise<Stream<BetaRawMessageStreamEvent>> {
+  // 构建 API 请求参数
+  const params: BetaMessageStreamParams = {
+    model,
+    max_tokens: getModelMaxOutputTokens(),
+    messages,
+    system: systemPrompt,
+    tools: tools.map(toolToAPISchema),
+    stream: true,
+  }
+
+  // 发送流式请求
+  return anthropic.messages.stream(params)
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-6</span>
+          <p>导入 Anthropic SDK 的类型定义——这些都是来自官方 SDK 包。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">9-14</span>
+          <p>定义函数签名：接收消息历史、系统提示、工具列表和模型名称。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">16-23</span>
+          <p>构建 API 请求：包含对话历史、工具定义、最大输出长度等参数。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">26</span>
+          <p>使用 <strong>流式 API</strong>——AI 的响应会一点点返回，而不是等待全部完成。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 为什么用流式 API？</strong>
+        <p>想象你在等待一个很长的回答。流式 API 让你可以<strong>边读边等</strong>——每收到一个词就显示出来，而不是等待整个回答完成。这让体验更流畅。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: MCP (Model Context Protocol) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>连接外部工具：MCP</h2>
+      <p><strong>Model Context Protocol (MCP)</strong> 是一个让 AI 应用连接外部工具的标准协议。想象它是一个"插座"——你可以插入各种工具服务器。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="mcp-diagram">
+        <div class="mcp-layer">
+          <div class="mcp-box mcp-claude">Claude Code</div>
+        </div>
+        <div class="mcp-arrow">↓ MCP 协议</div>
+        <div class="mcp-layer">
+          <div class="mcp-box mcp-server">GitHub 服务器</div>
+          <div class="mcp-box mcp-server">数据库服务器</div>
+          <div class="mcp-box mcp-server">Slack 服务器</div>
+        </div>
+        <div class="mcp-arrow">↓ 提供工具</div>
+        <div class="mcp-layer">
+          <div class="mcp-tool">创建 Issue</div>
+          <div class="mcp-tool">查询数据</div>
+          <div class="mcp-tool">发送消息</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/services/mcp/client.ts</span>
+        </div>
+        <pre><code class="language-typescript">import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+
+// 连接到 MCP 服务器
+export async function connectToMCPServer(
+  serverConfig: McpServerConfig
+): Promise<MCPServerConnection> {
+  // 创建传输层（stdio = 标准输入输出）
+  const transport = new StdioClientTransport({
+    command: serverConfig.command,
+    args: serverConfig.args,
+    env: serverConfig.env,
+  })
+
+  // 创建客户端
+  const client = new Client({
+    name: 'claude-code',
+    version: '1.0.0',
+  })
+
+  // 连接
+  await client.connect(transport)
+
+  // 列出服务器提供的工具
+  const tools = await client.listTools()
+
+  return { client, tools }
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>MCP 连接流程</h4>
+        <div class="translation-item">
+          <span class="line-num">1-2</span>
+          <p>导入 MCP SDK——这是 Anthropic 提供的标准库。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">9-13</span>
+          <p>创建传输层：通过<span class="glossary-term" data-tooltip="stdio = 标准输入输出。这是进程间通信的一种方式，通过标准输入/输出管道传递消息。">stdio</span>与子进程通信。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">16-19</span>
+          <p>创建 MCP 客户端，标识自己是 "claude-code"。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">22-25</span>
+          <p>连接服务器，并获取它提供的工具列表。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 为什么需要 MCP？</strong>
+        <p>Claude Code 自带的工具是固定的（读文件、执行命令等）。但你可能想让它访问<strong>你的</strong>系统——比如你的数据库、Jira、内部 API。MCP 让你可以轻松添加这些能力，而不需要修改 Claude Code 的源代码。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: LSP (Language Server Protocol) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>理解代码：LSP</h2>
+      <p><strong>Language Server Protocol (LSP)</strong> 是微软创造的协议，让编辑器能够获得代码智能功能——比如"跳转到定义"、"查找引用"、类型提示等。</p>
+      <p>Claude Code 使用 LSP 来更好地<strong>理解代码结构</strong>。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="lsp-example">
+        <div class="lsp-question">
+          <strong>Claude 想知道：</strong><br>
+          <code>authenticate()</code> 函数在哪里定义的？
+        </div>
+        <div class="lsp-arrow">↓ 问 LSP 服务器</div>
+        <div class="lsp-answer">
+          <strong>LSP 返回：</strong><br>
+          文件: <code>src/auth/login.ts</code><br>
+          行号: 42<br>
+          类型: <code>(username: string, password: string) => Promise&lt;User&gt;</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/services/lsp/manager.ts</span>
+        </div>
+        <pre><code class="language-typescript">/**
+ * 全局单例的 LSP 服务器管理器。
+ * 在 Claude Code 启动时初始化。
+ */
+let lspManagerInstance: LSPServerManager | undefined
+
+/**
+ * 获取 LSP 服务器管理器实例。
+ * 如果尚未初始化，返回 undefined。
+ */
+export function getLspServerManager(): LSPServerManager | undefined {
+  // 如果初始化失败，不返回损坏的实例
+  if (initializationState === 'failed') {
+    return undefined
+  }
+  return lspManagerInstance
+}
+
+// LSP 可以做什么？
+interface LSPCapabilities {
+  gotoDefinition(file: string, line: number): Promise<Location>
+  findReferences(file: string, line: number): Promise<Location[]>
+  getHover(file: string, line: number): Promise<string>
+  getCompletions(file: string, line: number): Promise<string[]>
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>LSP 提供的能力</h4>
+        <div class="translation-item">
+          <span class="line-num">5</span>
+          <p>全局单例——整个 Claude Code 只有一个 LSP 管理器。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">11-17</span>
+          <p>安全获取实例：如果初始化失败，返回 undefined 而不是损坏的对象。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">20-25</span>
+          <p>LSP 能做什么？跳转定义、查找引用、悬停提示、自动补全……</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 LSP 如何帮助 Claude？</strong>
+        <p>当 Claude 读取一个函数调用时，它可以问 LSP："这个函数在哪定义的？参数类型是什么？"这让 Claude 能够<strong>更准确地理解代码逻辑</strong>，就像一个真正的开发者使用 IDE 一样。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: OAuth 认证流程 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>安全认证：OAuth</h2>
+      <p>Claude Code 需要证明"你是谁"才能调用 Anthropic API。这通过 <strong>OAuth 2.0</strong> 协议完成——一个业界标准的授权流程。</p>
+    </div>
+
+    <div class="flow-animation" id="oauth-flow" data-steps='[
+      {"from": "用户", "to": "Claude Code", "label": "运行 claude login", "icon": "🖥️"},
+      {"from": "Claude Code", "to": "浏览器", "label": "打开授权页面", "icon": "🌐"},
+      {"from": "浏览器", "to": "Anthropic 服务器", "label": "用户登录并授权", "icon": "🔐"},
+      {"from": "Anthropic 服务器", "to": "Claude Code", "label": "返回 access_token", "icon": "🎟️"},
+      {"from": "Claude Code", "to": "钥匙串", "label": "安全存储 token", "icon": "🔑"},
+      {"from": "Claude Code", "to": "Anthropic API", "label": "带 token 调用 API", "icon": "✅"}
+    ]'></div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/constants/oauth.ts</span>
+        </div>
+        <pre><code class="language-typescript">// OAuth 授权范围
+export const CLAUDE_AI_OAUTH_SCOPES = [
+  'user:profile',           // 读取用户资料
+  'user:inference',         // 调用 AI 推理 API
+  'user:sessions:claude_code', // 会话管理
+  'user:mcp_servers',       // MCP 服务器配置
+  'user:file_upload',       // 文件上传
+] as const
+
+// OAuth 配置
+export function getOauthConfig() {
+  return {
+    clientId: 'claude-code-cli',
+    authUrl: 'https://auth.anthropic.com/oauth/authorize',
+    tokenUrl: 'https://auth.anthropic.com/oauth/token',
+    scopes: CLAUDE_AI_OAUTH_SCOPES,
+    redirectUri: 'http://127.0.0.1:8910/callback',
+  }
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>OAuth 配置解读</h4>
+        <div class="translation-item">
+          <span class="line-num">2-8</span>
+          <p><strong>授权范围 (scopes)</strong>：定义 Claude Code 可以做什么——就像手机 App 要求的权限。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">12-13</span>
+          <p>客户端 ID：标识这是"Claude Code CLI"应用。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">14-15</span>
+          <p>授权和令牌 URL：Anthropic 的 OAuth 服务器地址。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">17</span>
+          <p>回调 URL：用户授权后，浏览器会跳转到这个本地地址，Claude Code 在这里监听结果。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 为什么用 OAuth 而不是 API Key？</strong>
+        <p>API Key 是固定的密码——如果泄露就很危险。OAuth token 可以<strong>定期刷新</strong>、可以<strong>限制权限范围</strong>、可以<strong>随时撤销</strong>。这更安全，也是现代应用的标准做法。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="external-quiz">
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 1:</strong> 为什么 Claude Code 使用流式 API 而不是一次性获取完整响应？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>流式 API 更便宜</span>
+            <span class="quiz-feedback">不对。流式和非流式 API 的成本是一样的。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>用户可以边等边看到响应，体验更好</span>
+            <span class="quiz-feedback">✅ 正确！就像聊天软件一样，一个字一个字显示，而不是等待整段话完成。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>流式 API 速度更快</span>
+            <span class="quiz-feedback">实际上总时间差不多，但用户感知的等待时间更短。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 2:</strong> MCP (Model Context Protocol) 的主要作用是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>加速 API 调用</span>
+            <span class="quiz-feedback">不是。MCP 不是用来优化性能的。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>加密通信数据</span>
+            <span class="quiz-feedback">不对。MCP 是协议，不是加密工具。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>让 Claude Code 可以连接外部工具服务器，扩展能力</span>
+            <span class="quiz-feedback">✅ 对！MCP 就像一个"插座"，让你可以插入各种自定义工具。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 3:</strong> LSP 如何帮助 Claude 更好地理解代码？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>LSP 直接运行代码测试</span>
+            <span class="quiz-feedback">不对。LSP 不执行代码，它只提供静态分析。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>LSP 提供代码跳转、类型信息等，像 IDE 一样</span>
+            <span class="quiz-feedback">✅ 完全正确！LSP 让 Claude 能像开发者使用 IDE 一样理解代码结构。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>LSP 自动修复代码错误</span>
+            <span class="quiz-feedback">LSP 可以提供修复建议，但不会自动修复。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 7: 总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你学到了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🌐</div>
+          <h3>Anthropic API</h3>
+          <p>通过流式 API 调用 Claude 模型，边读边显示</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔌</div>
+          <h3>MCP 协议</h3>
+          <p>连接外部工具服务器，扩展 Claude Code 的能力</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">💡</div>
+          <h3>LSP 协议</h3>
+          <p>提供代码智能，让 AI 像开发者一样理解代码</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🔐</div>
+          <h3>OAuth 认证</h3>
+          <p>安全、可撤销的授权机制，比 API Key 更好</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你知道 Claude Code 如何与外部系统对话了。接下来，让我们看看代码中的<strong>聪明技巧</strong>。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 5: 聪明的技巧</strong> →</p>
+    </div>
+  </div>
+
+</section>

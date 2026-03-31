@@ -1,0 +1,504 @@
+<section class="module" id="module-5" data-module-number="5">
+
+  <!-- Screen 1: 模块介绍 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>聪明的技巧</h1>
+      <p class="lead">好代码不只是"能跑"——它要快、要优雅、要容易维护。Claude Code 里藏着很多聪明的模式和技巧。</p>
+      <p>这一模块，我们将学习这些技巧——不只是看代码，更重要的是理解<strong>为什么</strong>这样做，以及你如何用这些知识<strong>指导 AI 写出更好的代码</strong>。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="patterns-grid">
+        <div class="pattern-card">
+          <div class="pattern-icon">⚡</div>
+          <h3>并行预取</h3>
+          <p>在后台提前加载慢操作</p>
+        </div>
+        <div class="pattern-card">
+          <div class="pattern-icon">🪄</div>
+          <h3>懒加载</h3>
+          <p>只在需要时才导入模块</p>
+        </div>
+        <div class="pattern-card">
+          <div class="pattern-icon">🎚️</div>
+          <h3>特性开关</h3>
+          <p>动态控制功能的启用</p>
+        </div>
+        <div class="pattern-card">
+          <div class="pattern-icon">🐝</div>
+          <h3>Agent Swarms</h3>
+          <p>多个 AI 协作完成任务</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: 并行预取 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 1: 并行预取 (Parallel Prefetching)</h2>
+      <p>还记得 <code>main.tsx</code> 的开头吗？它在导入其他模块之前就启动了两个操作。这就是<strong>并行预取</strong>。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/main.tsx (1-20 行)</span>
+        </div>
+        <pre><code class="language-typescript">// 这些副作用必须在所有其他导入之前运行:
+// 1. profileCheckpoint 在模块加载前标记入口点
+// 2. startMdmRawRead 启动 MDM 子进程
+// 3. startKeychainPrefetch 预取钥匙串读取
+import { profileCheckpoint } from './utils/startupProfiler.js';
+
+profileCheckpoint('main_tsx_entry');
+import { startMdmRawRead } from './utils/settings/mdm/rawRead.js';
+
+// 🚀 启动慢操作 #1
+startMdmRawRead();
+import {
+  ensureKeychainPrefetchCompleted,
+  startKeychainPrefetch
+} from './utils/secureStorage/keychainPrefetch.js';
+
+// 🚀 启动慢操作 #2
+startKeychainPrefetch();
+
+// 然后才导入其他模块...
+import { feature } from 'bun:bundle';
+import { Command as CommanderCommand } from '@commander-js/extra-typings';
+import React from 'react';</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>为什么这样做？</h4>
+        <div class="translation-item">
+          <span class="line-num">11</span>
+          <p><code>startMdmRawRead()</code> 启动一个子进程读取企业管理设置——很慢（~30ms）。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">18</span>
+          <p><code>startKeychainPrefetch()</code> 从 macOS 钥匙串读取密码——也很慢（~65ms）。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">20-22</span>
+          <p>在这些操作运行的同时，主程序继续导入模块（~135ms）。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual-block">
+      <div class="timeline-comparison">
+        <div class="timeline-bad">
+          <h4>❌ 串行执行（慢）</h4>
+          <div class="timeline-bar">
+            <div class="timeline-segment" style="width: 30%; background: #E8836C;">MDM 读取 (30ms)</div>
+            <div class="timeline-segment" style="width: 40%; background: #D4A843;">钥匙串读取 (65ms)</div>
+            <div class="timeline-segment" style="width: 30%; background: #2A7B9B;">模块导入 (135ms)</div>
+          </div>
+          <p class="timeline-total">总时间: <strong>230ms</strong></p>
+        </div>
+        <div class="timeline-good">
+          <h4>✅ 并行执行（快）</h4>
+          <div class="timeline-bar">
+            <div class="timeline-segment parallel" style="width: 100%; background: linear-gradient(to right, #E8836C 30%, #D4A843 50%, #2A7B9B 100%);">
+              所有操作并行
+            </div>
+          </div>
+          <p class="timeline-total">总时间: <strong>135ms</strong> 🚀</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 关键洞察</strong>
+        <p>I/O 操作（读文件、网络请求）通常是<strong>等待密集型</strong>的——CPU 在等待硬盘或网络。并行预取让 CPU 在等待的同时做其他事情。</p>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："找出所有耗时的 I/O 操作，让它们尽早启动，并行运行。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: 懒加载 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 2: 懒加载 (Lazy Loading)</h2>
+      <p>不是所有代码都需要立即加载。<strong>懒加载</strong>的思想是：只在真正需要时才导入模块。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/QueryEngine.ts (85-89 行)</span>
+        </div>
+        <pre><code class="language-typescript">// 懒加载：MessageSelector.tsx 拉入 React/ink；
+// 只在查询时需要消息过滤才加载
+/* eslint-disable @typescript-eslint/no-require-imports */
+const messageSelector =
+  (): typeof import('src/components/MessageSelector.js') =>
+    require('src/components/MessageSelector.js')
+
+// 使用时才调用
+function filterMessages(messages: Message[]) {
+  const selector = messageSelector() // 👈 这时才加载
+  return selector.filterByRelevance(messages)
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>为什么用 require() 而不是 import？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-2</span>
+          <p>注释解释了原因：<code>MessageSelector.tsx</code> 依赖 React/Ink，这些很重。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">4-6</span>
+          <p>定义一个<strong>懒加载函数</strong>：返回动态 <code>require()</code>。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">10</span>
+          <p>只有当 <code>filterMessages()</code> 被调用时，才会加载 MessageSelector 模块。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual-block">
+      <div class="lazy-loading-diagram">
+        <div class="lazy-step">
+          <div class="lazy-icon">🏁</div>
+          <h4>启动时</h4>
+          <p>只定义函数，不加载模块<br><span class="lazy-size">0 KB</span></p>
+        </div>
+        <div class="lazy-arrow">→</div>
+        <div class="lazy-step">
+          <div class="lazy-icon">🖱️</div>
+          <h4>用户操作</h4>
+          <p>需要过滤消息功能</p>
+        </div>
+        <div class="lazy-arrow">→</div>
+        <div class="lazy-step">
+          <div class="lazy-icon">📦</div>
+          <h4>加载时</h4>
+          <p>才导入 MessageSelector<br><span class="lazy-size">+250 KB</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 什么时候用懒加载？</strong>
+        <ul>
+          <li>模块很大（比如 React 组件库）</li>
+          <li>功能不一定会用到（比如高级设置）</li>
+          <li>启动性能很关键</li>
+        </ul>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："识别不常用或体积大的模块，用懒加载延迟导入。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: 特性开关 (Feature Flags) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 3: 特性开关 (Feature Flags)</h2>
+      <p><strong>特性开关</strong>允许你在不修改代码的情况下，动态启用或禁用某些功能。Claude Code 使用 <code>bun:bundle</code> 的 <code>feature()</code> 函数实现这一点。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/QueryEngine.ts (115-125 行)</span>
+        </div>
+        <pre><code class="language-typescript">import { feature } from 'bun:bundle'
+
+// 根据特性开关动态导入模块
+const snipModule = feature('HISTORY_SNIP')
+  ? () => require('./utils/historySnip.js')
+  : null
+
+// 使用时检查
+function processHistory(messages: Message[]) {
+  if (feature('HISTORY_SNIP') && snipModule) {
+    const snip = snipModule()
+    return snip.compressHistory(messages)
+  }
+  return messages
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>特性开关的威力</h4>
+        <div class="translation-item">
+          <span class="line-num">1</span>
+          <p><code>feature()</code> 来自 Bun 打包器——在<strong>构建时</strong>决定。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">4-6</span>
+          <p>如果 <code>HISTORY_SNIP</code> 禁用，<code>snipModule</code> 就是 <code>null</code>，代码会被<strong>完全剔除</strong>。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">10-12</span>
+          <p>运行时再次检查——双重保护。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual-block">
+      <div class="feature-flags-example">
+        <div class="flag-scenario">
+          <h4>🧪 实验性功能</h4>
+          <pre><code>if (feature('EXPERIMENTAL_AI_TUNING')) {
+  applyAdvancedPromptOptimizations()
+}</code></pre>
+          <p>只在内部测试时启用，生产环境关闭</p>
+        </div>
+        <div class="flag-scenario">
+          <h4>🎭 A/B 测试</h4>
+          <pre><code>const useNewUI = feature('NEW_UI_DESIGN')
+renderUI(useNewUI ? NewComponent : OldComponent)</code></pre>
+          <p>一半用户看到新 UI，一半看到旧 UI</p>
+        </div>
+        <div class="flag-scenario">
+          <h4>🚨 应急开关</h4>
+          <pre><code>if (feature('ENABLE_REMOTE_AGENTS')) {
+  launchRemoteAgent()
+}</code></pre>
+          <p>如果远程服务出问题，可以立即关闭</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 为什么用特性开关？</strong>
+        <p>想象你开发了一个新功能，但不确定它是否稳定。特性开关让你可以：</p>
+        <ul>
+          <li>先给内部团队测试</li>
+          <li>逐步推广（1% → 10% → 50% → 100%）</li>
+          <li>如果出问题，一键关闭，不需要重新部署</li>
+        </ul>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："新功能要加特性开关，方便控制和回滚。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: Agent Swarms (多代理协作) -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>技巧 4: Agent Swarms (多代理协作)</h2>
+      <p>一个复杂任务，一个 AI 可能搞不定。但如果有<strong>多个 AI 协作</strong>呢？每个专注一个子任务，最后汇总结果。</p>
+      <p>这就是 <strong>Agent Swarms</strong>——一群 AI "蜜蜂"协作完成大任务。</p>
+    </div>
+
+    <div class="visual-block">
+      <div class="swarm-visualization">
+        <div class="swarm-task">
+          <h4>大任务：重构整个认证系统</h4>
+        </div>
+        <div class="swarm-arrow">↓ 拆分</div>
+        <div class="swarm-agents">
+          <div class="swarm-agent" style="border-color: var(--color-actor-1);">
+            <div class="agent-name">Agent 1</div>
+            <div class="agent-task">审计现有代码</div>
+          </div>
+          <div class="swarm-agent" style="border-color: var(--color-actor-2);">
+            <div class="agent-name">Agent 2</div>
+            <div class="agent-task">设计新架构</div>
+          </div>
+          <div class="swarm-agent" style="border-color: var(--color-actor-3);">
+            <div class="agent-name">Agent 3</div>
+            <div class="agent-task">迁移数据库</div>
+          </div>
+          <div class="swarm-agent" style="border-color: var(--color-actor-4);">
+            <div class="agent-name">Agent 4</div>
+            <div class="agent-task">更新测试</div>
+          </div>
+        </div>
+        <div class="swarm-arrow">↓ 汇总</div>
+        <div class="swarm-result">
+          <h4>✅ 完成：所有结果合并</h4>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/utils/agentSwarmsEnabled.ts</span>
+        </div>
+        <pre><code class="language-typescript">/**
+ * 检查是否启用 Agent Teams/Swarms 功能。
+ * 这是所有多代理功能的统一开关。
+ */
+export function isAgentSwarmsEnabled(): boolean {
+  // 内部版本：始终开启
+  if (process.env.USER_TYPE === 'ant') {
+    return true
+  }
+
+  // 外部版本：需要实验性环境变量或 --agent-teams 标志
+  if (
+    !isEnvTruthy(process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS) &&
+    !isAgentTeamsFlagSet()
+  ) {
+    return false
+  }
+
+  // 通过 GrowthBook 的紧急开关控制
+  if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_flint', true)) {
+    return false
+  }
+
+  return true
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>多层门禁控制</h4>
+        <div class="translation-item">
+          <span class="line-num">7-9</span>
+          <p>内部用户（Anthropic 员工）始终可用——方便测试。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">12-17</span>
+          <p>外部用户需要<strong>明确选择</strong>：设置环境变量或传 <code>--agent-teams</code> 标志。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">20-22</span>
+          <p>最后检查<strong>紧急开关</strong>——如果功能出问题，可以远程关闭。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 什么时候用 Agent Swarms？</strong>
+        <ul>
+          <li>任务可以并行拆分（比如处理多个文件）</li>
+          <li>需要不同视角（一个 Agent 写代码，另一个审查）</li>
+          <li>任务很大，一个 AI 的上下文装不下</li>
+        </ul>
+        <p><strong>如何指导 AI？</strong> 告诉 AI："这个任务太大了，拆成几个子任务，用多个 Agent 并行处理。"</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="patterns-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 并行预取为什么能加速启动？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>它让代码运行得更快</span>
+            <span class="quiz-feedback">不对。代码执行速度没变，只是调度方式变了。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>它跳过了不需要的操作</span>
+            <span class="quiz-feedback">不对。所有操作都会执行，只是顺序不同。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>它让 I/O 操作和模块加载并行执行，节省等待时间</span>
+            <span class="quiz-feedback">✅ 正确！就像洗衣服的同时做饭，而不是一个一个来。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 什么时候应该使用懒加载？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>所有模块都应该懒加载</span>
+            <span class="quiz-feedback">不对。核心模块应该立即加载，只有不常用的才懒加载。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>模块体积大且不一定会用到时</span>
+            <span class="quiz-feedback">✅ 对！懒加载最适合大而不常用的模块。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>只有在生产环境才懒加载</span>
+            <span class="quiz-feedback">不对。懒加载在开发和生产环境都有用。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 3:</strong> Agent Swarms 的主要优势是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>让 AI 运行更快</span>
+            <span class="quiz-feedback">速度不是主要优势，能力才是。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>节省 API 费用</span>
+            <span class="quiz-feedback">不对。多个 Agent 可能会花更多钱。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>可以并行处理复杂任务，每个 Agent 专注一个子任务</span>
+            <span class="quiz-feedback">✅ 完全正确！就像团队协作，每人负责一部分。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 7: 总结与实践建议 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>如何运用这些技巧？</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">⚡</div>
+          <h3>并行预取</h3>
+          <p><strong>指导 AI：</strong>"找出所有慢 I/O 操作，让它们尽早启动并并行运行"</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🪄</div>
+          <h3>懒加载</h3>
+          <p><strong>指导 AI：</strong>"识别大模块，用懒加载延迟到真正需要时才导入"</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🎚️</div>
+          <h3>特性开关</h3>
+          <p><strong>指导 AI：</strong>"新功能加特性开关，方便 A/B 测试和应急关闭"</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🐝</div>
+          <h3>Agent Swarms</h3>
+          <p><strong>指导 AI：</strong>"这个任务太大，拆成子任务让多个 Agent 并行处理"</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 关键洞察</strong>
+        <p>这些技巧不只是"代码优化"——它们是<strong>思维模式</strong>。当你理解了这些模式，你就能更好地<strong>描述你想要什么</strong>，AI 也就能写出更好的代码。</p>
+        <p>作为 "vibe coder"，你的优势不是记住语法，而是<strong>识别模式、提出需求、评估方案</strong>。</p>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你掌握了这些聪明技巧。最后一个模块，让我们从<strong>全局视角</strong>看整个系统。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 6: 全局架构</strong> →</p>
+    </div>
+  </div>
+
+</section>

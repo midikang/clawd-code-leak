@@ -1,0 +1,774 @@
+<section class="module" id="module-3" data-module-number="3">
+
+  <!-- Screen 1: 工具的生命周期 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h1>工具如何工作？从 Bash 到权限</h1>
+      <p class="lead">当 Claude 决定"我需要读取一个文件"时，幕后发生了什么？让我们追踪一个工具调用的完整生命周期。</p>
+    </div>
+
+    <div class="lifecycle-diagram">
+      <div class="lifecycle-step" data-step="1">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>定义 Schema</h3>
+          <p>工具声明它需要什么参数</p>
+          <code>inputSchema: z.object({ file_path: z.string() })</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="2">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>AI 决定调用</h3>
+          <p>Claude 从可用工具中选择并生成参数</p>
+          <code>tool_use: { name: "Read", input: { file_path: "/tmp/auth.ts" } }</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="3" style="--step-color: var(--color-error)">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>权限检查</h3>
+          <p>检查用户是否允许这个操作</p>
+          <div class="permission-check">
+            <div class="check-item">
+              <span class="check-icon">🔍</span>
+              <span>验证输入合法性</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon">🛡️</span>
+              <span>检查权限规则</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon">👤</span>
+              <span>询问用户(如需要)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="4">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <h3>执行工具</h3>
+          <p>调用 <code>tool.call()</code> 方法</p>
+          <code>const result = await tool.call(input, context)</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="5">
+        <div class="step-number">5</div>
+        <div class="step-content">
+          <h3>返回结果</h3>
+          <p>工具返回数据给 AI</p>
+          <code>ToolResult&lt;string&gt; { data: "文件内容..." }</code>
+        </div>
+      </div>
+
+      <div class="lifecycle-arrow">↓</div>
+
+      <div class="lifecycle-step" data-step="6">
+        <div class="step-number">6</div>
+        <div class="step-content">
+          <h3>AI 处理结果</h3>
+          <p>Claude 理解结果，决定下一步</p>
+          <code>"根据文件内容，我需要修改第 42 行..."</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p><strong>权限检查</strong>是最关键的步骤。Claude Code 永远不会在未经用户同意的情况下执行危险操作。这就是为什么你会看到"Claude 想要执行 git push，是否允许？"这样的提示。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2: Tool 类型定义 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>工具的"基因蓝图"：Tool 类型</h2>
+      <p>让我们看看 <code>src/Tool.ts</code> 中工具的类型定义——这是所有工具必须遵守的"契约"。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/Tool.ts (第 362-410 行,精简版)</span>
+        </div>
+        <pre><code class="language-typescript">export type Tool&lt;
+  Input extends AnyObject = AnyObject,
+  Output = unknown,
+  P extends ToolProgressData = ToolProgressData,
+&gt; = {
+  // 工具的唯一名称
+  readonly name: string
+
+  // 可选的别名(用于重命名后的兼容性)
+  aliases?: string[]
+
+  // 输入参数的 schema (Zod 类型)
+  readonly inputSchema: Input
+
+  // 输出类型的 schema
+  outputSchema?: z.ZodType&lt;unknown&gt;
+
+  // ===== 核心方法 =====
+
+  // 执行工具的主函数
+  call(
+    args: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+    canUseTool: CanUseToolFn,
+    parentMessage: AssistantMessage,
+    onProgress?: ToolCallProgress&lt;P&gt;,
+  ): Promise&lt;ToolResult&lt;Output&gt;&gt;
+
+  // 生成工具描述(给 AI 看的)
+  description(
+    input: z.infer&lt;Input&gt;,
+    options: { ... }
+  ): Promise&lt;string&gt;
+
+  // ===== 安全和权限 =====
+
+  // 验证输入是否合法
+  validateInput?(
+    input: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+  ): Promise&lt;ValidationResult&gt;
+
+  // 检查权限(核心安全机制)
+  checkPermissions(
+    input: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+  ): Promise&lt;PermissionResult&gt;
+
+  // ===== 元数据方法 =====
+
+  // 是否启用这个工具
+  isEnabled(): boolean
+
+  // 是否是只读操作
+  isReadOnly(input: z.infer&lt;Input&gt;): boolean
+
+  // 是否是破坏性操作(删除、覆盖等)
+  isDestructive?(input: z.infer&lt;Input&gt;): boolean
+
+  // 是否可以并发执行
+  isConcurrencySafe(input: z.infer&lt;Input&gt;): boolean
+
+  // ===== UI 渲染方法 =====
+
+  // 渲染工具使用消息(在终端中显示)
+  renderToolUseMessage(
+    input: Partial&lt;z.infer&lt;Input&gt;&gt;,
+    options: { theme: ThemeName; verbose: boolean }
+  ): React.ReactNode
+
+  // 渲染工具结果消息
+  renderToolResultMessage?(
+    content: Output,
+    progressMessages: ProgressMessage&lt;P&gt;[],
+    options: { ... }
+  ): React.ReactNode
+
+  // 用户可见的工具名称
+  userFacingName(input: Partial&lt;z.infer&lt;Input&gt;&gt; | undefined): string
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这个类型定义在说什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-5</span>
+          <p>Tool 是一个<span class="glossary-term" data-tooltip="泛型类型 (Generic Type) 是可以接受类型参数的类型定义。就像函数可以接受值参数，泛型可以接受类型参数，让同一个定义适用于多种具体类型。">泛型类型</span>，可以指定输入类型、输出类型、进度类型。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">19-26</span>
+          <p><code>call()</code> 是工具的<strong>灵魂</strong>——这里是实际逻辑执行的地方。它接收参数、上下文、权限检查函数、进度回调，返回结果。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">34-43</span>
+          <p>双重安全机制：<code>validateInput</code> 检查输入合法性(路径是否存在、参数是否有效)，<code>checkPermissions</code> 检查用户是否允许(核心安全)。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">48-57</span>
+          <p>元数据方法帮助系统理解工具的性质：是否只读？是否破坏性？是否可并发？这些信息用于优化执行和保护用户。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">61-73</span>
+          <p>UI 渲染方法：工具不仅执行操作，还要在终端中漂亮地展示自己在做什么。这就是为什么你能看到彩色、格式化的输出。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 设计模式：接口契约</strong>
+        <p>Tool 类型定义了一个<strong>接口契约</strong>——所有工具必须实现这些方法。这让系统可以统一处理 40+ 个工具，而不需要为每个工具编写特殊逻辑。这是<span class="glossary-term" data-tooltip="多态 (Polymorphism) 是面向对象编程的核心概念，允许不同类型的对象通过相同的接口进行操作。">多态</span>的经典应用。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: BashTool 实例分析 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>实战案例：BashTool 如何工作</h2>
+      <p>让我们看看最常用的工具之一——<code>BashTool</code>。它负责执行所有终端命令。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/tools/BashTool/BashTool.tsx (第 95-172 行,精简版)</span>
+        </div>
+        <pre><code class="language-typescript">// 检查 bash 命令是否是搜索或读取操作
+export function isSearchOrReadBashCommand(command: string): {
+  isSearch: boolean;
+  isRead: boolean;
+  isList: boolean;
+} {
+  // 尝试解析命令
+  let partsWithOperators: string[];
+  try {
+    partsWithOperators = splitCommandWithOperators(command);
+  } catch {
+    // 如果解析失败(语法错误),不是搜索/读取命令
+    return { isSearch: false, isRead: false, isList: false };
+  }
+
+  if (partsWithOperators.length === 0) {
+    return { isSearch: false, isRead: false, isList: false };
+  }
+
+  let hasSearch = false;
+  let hasRead = false;
+  let hasList = false;
+  let hasNonNeutralCommand = false;
+
+  // 遍历命令的每个部分
+  for (const part of partsWithOperators) {
+    // 跳过重定向操作符
+    if (part === '>' || part === '>>' || part === '>&') {
+      continue;
+    }
+    // 跳过管道和逻辑操作符
+    if (part === '||' || part === '&&' || part === '|' || part === ';') {
+      continue;
+    }
+
+    const baseCommand = part.trim().split(/\s+/)[0];
+    if (!baseCommand) continue;
+
+    // 跳过语义中性的命令(echo, printf 等)
+    if (BASH_SEMANTIC_NEUTRAL_COMMANDS.has(baseCommand)) {
+      continue;
+    }
+
+    hasNonNeutralCommand = true;
+
+    // 检查是否是搜索/读取/列表命令
+    const isPartSearch = BASH_SEARCH_COMMANDS.has(baseCommand);
+    const isPartRead = BASH_READ_COMMANDS.has(baseCommand);
+    const isPartList = BASH_LIST_COMMANDS.has(baseCommand);
+
+    // 如果有任何部分不是搜索/读取/列表,整个命令就不可折叠
+    if (!isPartSearch && !isPartRead && !isPartList) {
+      return { isSearch: false, isRead: false, isList: false };
+    }
+
+    if (isPartSearch) hasSearch = true;
+    if (isPartRead) hasRead = true;
+    if (isPartList) hasList = true;
+  }
+
+  // 如果只有中性命令,不可折叠
+  if (!hasNonNeutralCommand) {
+    return { isSearch: false, isRead: false, isList: false };
+  }
+
+  return { isSearch: hasSearch, isRead: hasRead, isList: hasList };
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>这段代码在做什么？</h4>
+        <div class="translation-item">
+          <span class="line-num">1-6</span>
+          <p>定义函数：判断一个 bash 命令是否是"搜索"或"读取"操作。这用于 UI——这类命令的输出可以折叠显示。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">8-13</span>
+          <p>安全解析：尝试解析命令。如果命令语法错误，直接返回 false(不是搜索/读取命令)。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">25-42</span>
+          <p>遍历命令的每个部分。跳过<span class="glossary-term" data-tooltip="操作符 (Operator) 是编程语言中用于执行特定操作的符号，如管道 | 将一个命令的输出传递给另一个命令。">操作符</span>(管道、重定向)和"语义中性"的命令(echo, printf——它们不影响命令的读/写性质)。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">44-53</span>
+          <p>检查每个命令是否在预定义的搜索/读取/列表命令集合中。关键规则：<strong>所有部分</strong>都必须是这类命令，整个命令才算可折叠。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">全局逻辑</span>
+          <p>为什么需要这个？UI 优化。<code>cat file.txt</code> 的输出可以折叠，但 <code>rm -rf /</code> 绝对不能折叠——它是破坏性操作，必须显眼！</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p>BashTool 还定义了几个重要的命令集合：</p>
+      <div class="code-snippet">
+        <code class="language-typescript">// 搜索命令
+const BASH_SEARCH_COMMANDS = new Set([
+  'find', 'grep', 'rg', 'ag', 'ack', 'locate', 'which', 'whereis'
+]);
+
+// 读取/查看命令
+const BASH_READ_COMMANDS = new Set([
+  'cat', 'head', 'tail', 'less', 'more',
+  'wc', 'stat', 'file', 'strings',
+  'jq', 'awk', 'cut', 'sort', 'uniq', 'tr'
+]);
+
+// 列表命令
+const BASH_LIST_COMMANDS = new Set([
+  'ls', 'tree', 'du'
+]);</code>
+      </div>
+      <p>这些集合帮助系统理解命令的<strong>语义</strong>——不仅仅执行，还要理解它在做什么。</p>
+    </div>
+  </div>
+
+  <!-- Screen 4: 权限系统深入 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>权限系统：保护用户的最后防线</h2>
+      <p>Claude Code 的权限系统是它最重要的安全机制。让我们看看它如何工作。</p>
+    </div>
+
+    <div class="permission-flow-animation" id="permission-check-flow" data-steps='[
+      {"node": "工具调用", "action": "AI 想执行: git push origin main", "status": "pending"},
+      {"node": "验证输入", "action": "检查参数是否合法", "status": "pending"},
+      {"node": "检查规则", "action": "查询权限规则数据库", "status": "pending"},
+      {"node": "规则匹配", "action": "找到规则: git push → Ask", "status": "pending"},
+      {"node": "询问用户", "action": "显示权限对话框", "status": "pending"},
+      {"node": "用户决定", "action": "用户点击「允许」", "status": "pending"},
+      {"node": "记录决策", "action": "保存到权限历史", "status": "pending"},
+      {"node": "执行工具", "action": "运行 git push", "status": "success"}
+    ]'></div>
+
+    <div class="content-narrow">
+      <h3>权限检查的三个层级</h3>
+
+      <div class="permission-levels">
+        <div class="permission-level">
+          <div class="level-badge" style="--badge-color: var(--color-success)">总是允许</div>
+          <h4>Always Allow</h4>
+          <p>自动批准的操作，不需要询问</p>
+          <ul>
+            <li>读取项目目录内的文件</li>
+            <li>执行 <code>git status</code>, <code>git diff</code></li>
+            <li>列出目录 <code>ls</code></li>
+          </ul>
+        </div>
+
+        <div class="permission-level">
+          <div class="level-badge" style="--badge-color: var(--color-info)">总是询问</div>
+          <h4>Always Ask</h4>
+          <p>每次都需要用户确认</p>
+          <ul>
+            <li>修改文件</li>
+            <li>执行 <code>git push</code>, <code>git commit</code></li>
+            <li>运行可能有副作用的命令</li>
+          </ul>
+        </div>
+
+        <div class="permission-level">
+          <div class="level-badge" style="--badge-color: var(--color-error)">总是拒绝</div>
+          <h4>Always Deny</h4>
+          <p>自动拒绝，不允许执行</p>
+          <ul>
+            <li>访问敏感目录(如 <code>~/.ssh</code>)</li>
+            <li>执行危险命令(如 <code>rm -rf /</code>)</li>
+            <li>用户明确禁止的操作</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="permission-dialog-example">
+        <h4>权限对话框示例</h4>
+        <div class="mock-dialog">
+          <div class="dialog-header">
+            <span class="dialog-icon">🛡️</span>
+            <span class="dialog-title">权限请求</span>
+          </div>
+          <div class="dialog-body">
+            <p class="dialog-question">Claude 想要执行以下操作：</p>
+            <div class="dialog-tool-call">
+              <div class="tool-call-name">Bash</div>
+              <div class="tool-call-input"><code>git push origin main</code></div>
+            </div>
+            <p class="dialog-warning">⚠️ 这将修改远程仓库</p>
+          </div>
+          <div class="dialog-actions">
+            <button class="dialog-btn btn-deny">拒绝</button>
+            <button class="dialog-btn btn-allow-once">仅此一次</button>
+            <button class="dialog-btn btn-allow-always">总是允许</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-insight">
+        <strong>🎯 为什么需要这么复杂的权限系统？</strong>
+        <p>因为 AI 可能会犯错。它可能误解你的意图，生成错误的命令，或者被<span class="glossary-term" data-tooltip="提示注入 (Prompt Injection) 是一种攻击方式，通过在输入中嵌入特殊指令来操纵 AI 的行为。">提示注入</span>攻击利用。权限系统确保即使 AI 想做坏事，它也做不了——除非你明确同意。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: 权限规则代码 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>权限规则的代码实现</h2>
+      <p>让我们看看 <code>src/utils/permissions/permissions.ts</code> 中权限检查的实际代码。</p>
+    </div>
+
+    <div class="code-translation">
+      <div class="code-panel">
+        <div class="code-header">
+          <span class="code-filename">src/utils/permissions/permissions.ts (第 1-100 行,精简版)</span>
+        </div>
+        <pre><code class="language-typescript">import type { ToolPermissionContext, ToolUseContext } from '../../Tool.js'
+import type { PermissionResult } from './PermissionResult.js'
+
+// 权限检查的主入口
+export async function checkPermissions(
+  toolName: string,
+  input: Record&lt;string, unknown&gt;,
+  context: ToolUseContext
+): Promise&lt;PermissionResult&gt; {
+  const { mode, alwaysAllowRules, alwaysDenyRules, alwaysAskRules } =
+    context.permissionContext
+
+  // 第 1 步：检查「总是拒绝」规则
+  const denyRule = getDenyRuleForTool(context.permissionContext, {
+    name: toolName,
+    ...input
+  })
+
+  if (denyRule) {
+    return {
+      behavior: 'deny',
+      reason: 'rule',
+      message: `操作被规则拒绝: ${denyRule}`
+    }
+  }
+
+  // 第 2 步：检查「总是允许」规则
+  const allowRule = getAllowRuleForTool(context.permissionContext, {
+    name: toolName,
+    ...input
+  })
+
+  if (allowRule) {
+    return {
+      behavior: 'allow',
+      updatedInput: input
+    }
+  }
+
+  // 第 3 步：检查「总是询问」规则
+  const askRule = getAskRuleForTool(context.permissionContext, {
+    name: toolName,
+    ...input
+  })
+
+  if (askRule) {
+    return {
+      behavior: 'ask',
+      message: '需要用户确认此操作'
+    }
+  }
+
+  // 第 4 步：根据权限模式决定默认行为
+  if (mode === 'auto') {
+    // 自动模式：大多数操作自动允许
+    return { behavior: 'allow', updatedInput: input }
+  } else if (mode === 'plan') {
+    // 计划模式：询问用户
+    return { behavior: 'ask' }
+  } else {
+    // 默认模式：对破坏性操作询问
+    const isDestructive = await isDestructiveOperation(toolName, input)
+    return isDestructive
+      ? { behavior: 'ask' }
+      : { behavior: 'allow', updatedInput: input }
+  }
+}
+
+// 检查操作是否是破坏性的
+async function isDestructiveOperation(
+  toolName: string,
+  input: Record&lt;string, unknown&gt;
+): Promise&lt;boolean&gt; {
+  // 文件删除、覆盖、git push 等都是破坏性操作
+  if (toolName === 'Bash') {
+    const command = input.command as string
+    return (
+      command.includes('rm ') ||
+      command.includes('git push') ||
+      command.includes('&gt;') // 重定向覆盖文件
+    )
+  }
+
+  if (toolName === 'Edit') {
+    // 文件编辑总是破坏性的(修改现有内容)
+    return true
+  }
+
+  return false
+}</code></pre>
+      </div>
+      <div class="translation-panel">
+        <h4>权限检查的逻辑</h4>
+        <div class="translation-item">
+          <span class="line-num">5-12</span>
+          <p>主函数 <code>checkPermissions</code> 接收工具名、输入参数、上下文，返回权限决策。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">14-25</span>
+          <p><strong>第一优先级：拒绝规则</strong>。如果有明确的拒绝规则，立即返回拒绝，不继续检查。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">27-37</span>
+          <p><strong>第二优先级：允许规则</strong>。如果有允许规则且没有拒绝规则，自动允许。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">39-49</span>
+          <p><strong>第三优先级：询问规则</strong>。明确标记为"需要询问"的操作。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">51-64</span>
+          <p><strong>默认行为</strong>。如果没有匹配的规则，根据权限模式(auto/plan/default)和操作性质(是否破坏性)决定。</p>
+        </div>
+        <div class="translation-item">
+          <span class="line-num">67-88</span>
+          <p>辅助函数：判断操作是否破坏性。例如 <code>rm</code>, <code>git push</code>, 文件编辑都是破坏性的。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="callout callout-aha">
+        <strong>💡 核心洞察</strong>
+        <p>权限系统使用<strong>优先级链</strong>：拒绝 > 允许 > 询问 > 默认。这确保安全规则(拒绝)永远优先于便利性(自动允许)。这是"安全优先"设计原则的体现。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: 测验 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>测试你的理解</h2>
+    </div>
+
+    <div class="quiz" data-quiz-id="tools-quiz">
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 1:</strong> 工具生命周期的正确顺序是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="0">
+            <span>执行 → 权限检查 → 返回结果</span>
+            <span class="quiz-feedback">不对！权限检查必须在执行之前。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="1">
+            <span>定义 Schema → 执行 → 权限检查 → 返回结果</span>
+            <span class="quiz-feedback">几乎对了，但权限检查在执行之前。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="2">
+            <span>定义 Schema → AI 决定调用 → 权限检查 → 执行 → 返回结果 → AI 处理</span>
+            <span class="quiz-feedback">✅ 完美！这是完整的生命周期，权限检查是安全关口。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q1" value="3">
+            <span>AI 决定 → 返回结果 → 执行</span>
+            <span class="quiz-feedback">顺序完全错了，而且缺少权限检查。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="1">
+        <p><strong>问题 2:</strong> 为什么 BashTool 需要 <code>isSearchOrReadBashCommand()</code> 函数？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="0">
+            <span>为了安全检查——防止危险命令</span>
+            <span class="quiz-feedback">不完全对。安全检查在权限系统中，这个函数是为了 UI。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="1">
+            <span>为了 UI 优化——判断命令输出是否可以折叠显示</span>
+            <span class="quiz-feedback">✅ 正确！<code>cat file.txt</code> 的输出可以折叠，但破坏性命令必须显眼。这是用户体验优化。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="2">
+            <span>为了性能——减少命令执行时间</span>
+            <span class="quiz-feedback">这个函数不影响执行，只影响显示。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q2" value="3">
+            <span>为了兼容性——支持旧版本 bash</span>
+            <span class="quiz-feedback">这与 bash 版本无关。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="0">
+        <p><strong>问题 3:</strong> 权限检查的优先级是什么？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="0">
+            <span>拒绝规则 > 允许规则 > 询问规则 > 默认行为</span>
+            <span class="quiz-feedback">✅ 完全正确！安全(拒绝)永远优先于便利(允许)。这是"安全优先"设计原则。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="1">
+            <span>允许规则 > 拒绝规则 > 询问规则 > 默认行为</span>
+            <span class="quiz-feedback">这很危险！允许规则不能覆盖拒绝规则。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="2">
+            <span>询问规则 > 拒绝规则 > 允许规则 > 默认行为</span>
+            <span class="quiz-feedback">不对。拒绝规则必须是最高优先级。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q3" value="3">
+            <span>所有规则优先级相同</span>
+            <span class="quiz-feedback">必须有优先级，否则会有冲突。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="3">
+        <p><strong>问题 4:</strong> Tool 类型定义中，哪个方法是工具的"灵魂"——实际执行逻辑的地方？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="0">
+            <span>checkPermissions()</span>
+            <span class="quiz-feedback">这是安全检查，不是执行逻辑。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="1">
+            <span>description()</span>
+            <span class="quiz-feedback">这只是生成描述文本，不执行操作。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="2">
+            <span>renderToolUseMessage()</span>
+            <span class="quiz-feedback">这是 UI 渲染，不是业务逻辑。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q4" value="3">
+            <span>call()</span>
+            <span class="quiz-feedback">✅ 正确！<code>call()</code> 是工具的核心——这里是实际读取文件、执行命令、修改代码的地方。</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="quiz-question" data-correct="2">
+        <p><strong>问题 5:</strong> 为什么需要 <code>isDestructive()</code> 方法？</p>
+        <div class="quiz-options">
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="0">
+            <span>为了记录日志</span>
+            <span class="quiz-feedback">日志记录不需要区分破坏性。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="1">
+            <span>为了计算成本</span>
+            <span class="quiz-feedback">成本与操作性质无关。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="2">
+            <span>为了决定是否需要询问用户——破坏性操作默认需要确认</span>
+            <span class="quiz-feedback">✅ 正确！删除文件、git push 等破坏性操作即使没有明确的"询问规则"，系统也会默认要求确认。</span>
+          </label>
+          <label class="quiz-option">
+            <input type="radio" name="q5" value="3">
+            <span>为了优化执行速度</span>
+            <span class="quiz-feedback">性能与破坏性无关。</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 7: 总结 -->
+  <div class="screen">
+    <div class="content-narrow">
+      <h2>你已经掌握了什么</h2>
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">🔄</div>
+          <h3>工具生命周期</h3>
+          <p>定义 Schema → AI 调用 → 权限检查 → 执行 → 返回结果 → AI 处理</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">📐</div>
+          <h3>Tool 类型契约</h3>
+          <p>所有工具必须实现的接口：call(), checkPermissions(), render 方法等</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">⚙️</div>
+          <h3>BashTool 实现</h3>
+          <p>解析命令语义、判断可折叠性、执行 shell 命令的完整实现</p>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-icon">🛡️</div>
+          <h3>权限系统</h3>
+          <p>拒绝 > 允许 > 询问 > 默认的优先级链，保护用户安全</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <div class="key-learnings">
+        <h3>核心要点</h3>
+        <ul>
+          <li><strong>安全优先</strong>：权限检查在执行之前，拒绝规则优先级最高</li>
+          <li><strong>接口契约</strong>：Tool 类型定义了统一接口，让系统可以多态处理所有工具</li>
+          <li><strong>语义理解</strong>：工具不仅执行操作，还理解操作的性质(只读/破坏性/搜索等)</li>
+          <li><strong>用户体验</strong>：通过可折叠显示、彩色渲染等优化终端 UI</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="content-narrow">
+      <p class="lead">现在你理解了工具如何工作。接下来，让我们看看 Claude Code 如何与外部世界对话——MCP、API、LSP 等服务层。</p>
+    </div>
+
+    <div class="next-module-hint">
+      <p>向下滚动进入<strong>模块 4: 与外部世界对话</strong> →</p>
+    </div>
+  </div>
+
+</section>
